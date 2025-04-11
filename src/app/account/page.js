@@ -365,6 +365,7 @@ export default function AccountPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`, // Add Authorization header
         },
         body: JSON.stringify(settingsToSave),
       });
@@ -410,6 +411,7 @@ export default function AccountPage() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`, // Add Authorization header
             },
             body: JSON.stringify(settingsToTest),
         });
