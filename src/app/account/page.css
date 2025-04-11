@@ -1,0 +1,489 @@
+/* Account Page Styling */
+
+/* Tab Navigation Styles - Adapted from UI kit.html */
+.tabs-container {
+  margin-bottom: 30px; /* Space below tabs */
+  /* Optional: Add a subtle background/border if needed */
+  /* background: rgba(20, 20, 20, 0.2); */
+  /* border-radius: 12px; */
+  /* padding: 10px; */
+}
+
+.tabs {
+  display: flex;
+  gap: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Separator line below tabs */
+  padding-bottom: 10px; /* Space between tabs and line */
+}
+
+.tab {
+  flex: 1; /* Make tabs share space */
+  background: rgba(20, 20, 20, 0.4);
+  padding: 12px 15px; /* Adjust padding */
+  border-radius: 10px 10px 0 0; /* Round top corners */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none; /* Remove bottom border */
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #ccc; /* Default text color */
+  font-weight: 500;
+}
+
+.tab:hover {
+  border-color: #007bff;
+  background: rgba(0, 123, 255, 0.1);
+  color: #e0e0e0; /* Brighter text on hover */
+}
+
+.tab.active {
+  border-color: #8a2be2;
+  background: rgba(138, 43, 226, 0.1);
+  color: #f0f0f0; /* Brightest text for active */
+  /* Optional: Make active tab slightly taller or visually connected */
+  /* position: relative; */
+  /* top: 1px; */
+  /* border-bottom: 1px solid rgba(138, 43, 226, 0.1); */ /* Connect to content */
+}
+
+/* Tab Content Container */
+.tab-content {
+  display: none; /* Hide inactive tabs */
+  /* Styles for the content area below the tabs */
+  /* Use .account-section styles for consistency */
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: 0 0 16px 16px; /* Round bottom corners */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: none; /* Remove top border as tabs handle it */
+  padding: 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  margin-top: -1px; /* Overlap slightly with tab bottom border */
+  animation: fadeIn 0.4s ease-in-out; /* Fade in content */
+}
+
+.tab-content.active {
+  display: block; /* Show active tab */
+}
+
+/* Base styling for account sections */
+.account-section {
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  margin-bottom: 30px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.account-section:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Enhanced billing card styling */
+.billing-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(138, 43, 226, 0.3);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.billing-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 35px rgba(138, 43, 226, 0.2);
+  border-color: rgba(138, 43, 226, 0.5);
+}
+
+.billing-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(138, 43, 226, 0.1), transparent);
+  transform: rotate(45deg);
+  animation: shimmer 6s infinite linear;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.billing-card .section-title {
+    font-size: 20px;
+    background: linear-gradient(90deg, #c6008d, #007bff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 30px;
+}
+
+.billing-card .section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, #8a2be2, #4a00e0);
+  border-radius: 3px;
+}
+
+/* Credits display */
+.billing-info {
+  position: relative;
+  width: 100%;
+  z-index: 1;
+  background: rgba(15, 15, 15, 0.4);
+  border: 1px solid rgba(138, 43, 226, 0.3);
+  border-radius: 16px;
+  padding: 30px;
+  transition: all 0.4s ease;
+  overflow: hidden;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.billing-info:hover {
+  border-color: rgba(138, 43, 226, 0.7);
+  box-shadow: 0 12px 28px rgba(138, 43, 226, 0.25);
+}
+
+.billing-info::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(138, 43, 226, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.credits-value {
+  font-size: 4.5rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #c6008d, #007bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-align: center;
+  margin: 10px 0;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: inline-block;
+  text-shadow: 0 5px 15px rgba(138, 43, 226, 0.3);
+  animation: pulse 3s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); text-shadow: 0 5px 15px rgba(138, 43, 226, 0.3); }
+  100% { transform: scale(1.05); text-shadow: 0 8px 20px rgba(138, 43, 226, 0.5); }
+}
+
+.billing-info:hover .credits-value {
+  transform: scale(1.1);
+  background: linear-gradient(90deg, #ff0080, #007bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.credits-label {
+  color: #b0b0b0;
+  font-size: 1rem;
+  text-align: center;
+  margin-top: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Voucher section */
+.voucher-section {
+  margin-top: 30px;
+  position: relative;
+  padding: 25px;
+  background: rgba(15, 15, 15, 0.5);
+  border-radius: 16px;
+  border: 1px solid rgba(138, 43, 226, 0.2);
+  transition: all 0.3s ease;
+}
+
+.voucher-section:hover {
+  border-color: rgba(138, 43, 226, 0.4);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.voucher-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  color: #f0f0f0;
+  position: relative;
+}
+
+.voucher-title svg {
+  margin-right: 12px;
+  color: #8a2be2;
+  animation: rotate 6s linear infinite;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Form styling */
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #d0d0d0;
+}
+
+.form-icon {
+  margin-right: 8px;
+  width: 16px;
+  color: #8a2be2;
+}
+
+.account-input {
+  width: 100%;
+  padding: 14px 15px;
+  font-size: 16px;
+  color: white;
+  background: rgba(20, 20, 20, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.account-input:focus {
+  border-color: #8a2be2;
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+.account-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Button styling */
+.account-btn {
+  padding: 14px 25px;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  border-radius: 10px;
+  text-transform: uppercase;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+  background: rgba(138, 43, 226, 0.2);
+  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
+  align-self: flex-start;
+}
+
+.account-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: all 0.4s ease;
+}
+
+.account-btn:hover {
+  border-color: #8a2be2;
+  box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
+  transform: translateY(-2px);
+}
+
+.account-btn:hover::before {
+  left: 100%;
+}
+
+.account-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Message styling */
+.message {
+  padding: 15px;
+  border-radius: 10px;
+  margin: 15px 0;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message svg {
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+/* Additional BillingCard Styling */
+.credits-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.credits-display {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+
+.pulse-icon {
+  animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.voucher-form {
+  position: relative;
+  z-index: 1;
+}
+
+.voucher-input {
+  background: rgba(15, 15, 15, 0.7);
+  border: 1px solid rgba(138, 43, 226, 0.3);
+  transition: all 0.3s ease;
+}
+
+.voucher-input:focus {
+  border-color: #8a2be2;
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
+  transform: translateY(-2px);
+}
+
+.voucher-btn {
+  background: linear-gradient(45deg, rgba(138, 43, 226, 0.4), rgba(74, 0, 224, 0.4));
+  border: none;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.voucher-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, rgba(138, 43, 226, 0.6), rgba(74, 0, 224, 0.6));
+  transition: all 0.4s ease;
+  z-index: -1;
+}
+
+.voucher-btn:hover::before {
+  left: 0;
+}
+
+.success-message {
+  background: rgba(0, 128, 0, 0.1);
+  border: 1px solid rgba(0, 128, 0, 0.3);
+  color: #00c853;
+  padding: 15px;
+  border-radius: 10px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.error-message {
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  color: #ff5252;
+  padding: 15px;
+  border-radius: 10px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.info-message {
+  background: rgba(0, 128, 255, 0.1);
+  border: 1px solid rgba(0, 128, 255, 0.3);
+  color: #2196f3;
+  padding: 15px;
+  border-radius: 10px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.message-icon {
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .account-section {
+    padding: 20px;
+  }
+  
+  .credits-value {
+    font-size: 2.5rem !important;
+  }
+  
+  .account-btn {
+    width: 100%;
+    align-self: center;
+  }
+  
+
+}

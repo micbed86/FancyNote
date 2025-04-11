@@ -1,0 +1,238 @@
+/* Notes Grid Styles */
+
+.standard-button {
+    padding: 15px 20px;
+    font-size: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    border-radius: 10px;
+    text-transform: uppercase;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+}
+
+.button-secondary {
+    background: rgba(0, 123, 255, 0.1);
+}
+
+.button-secondary:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
+}
+
+.button-secondary:active {
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
+
+.notes-list { /* Renamed class */
+  display: grid;
+  /* Adjust minmax for wider, shorter tiles */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px; /* Slightly smaller gap */
+  margin-top: 20px;
+}
+
+/* Replace .package and .package2 with a single glassmorphic note-tile */
+.note-tile {
+  /* Dimensions for horizontal layout */
+  height: 150px; /* Shorter height */
+  /* Width is handled by grid column minmax */
+
+  /* Glassmorphism */
+  background: rgba(30, 30, 30, 0.6); /* Base glass background */
+  backdrop-filter: blur(10px); /* Adjust blur as needed */
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px; /* Consistent radius */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+
+  /* Layout within the tile */
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Pushes content to top/bottom */
+  overflow: hidden; /* Prevent content overflow */
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative; /* For potential pseudo-elements or effects */
+}
+
+.note-tile:hover {
+  border-color: rgba(138, 43, 226, 0.5); /* Accent color border */
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(138, 43, 226, 0.2); /* Enhanced shadow + glow */
+  transform: translateY(-2px); /* Slight lift effect */
+}
+
+.text {
+  /* Title Style (Top) */
+  color: #f0f0f0; /* Brighter text for title */
+  font-size: 16px; /* Slightly smaller than original */
+  font-weight: 600; /* Make title bolder */
+  margin-bottom: 5px; /* Space below title */
+  /* Text Truncation (Single Line for Title) */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-date { /* Renamed class */
+  color: #a0a0a0; /* Dimmer color */
+  font-size: 11px; /* Smaller font size */
+  margin-bottom: 8px; /* Space below date */
+}
+
+/* New style for content excerpt */
+.note-excerpt {
+  color: #ccc; /* Slightly brighter than date */
+  font-size: 12px; /* Same small size as original date */
+  line-height: 1.4;
+  /* Multi-line truncation */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Show max 2 lines */
+  -webkit-box-orient: vertical;
+  margin-top: auto; /* Push excerpt towards bottom */
+}
+
+/* Remove icon styles */
+/* .tile-icon, .lower-third, .item-icon are no longer needed */
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  
+  .content-area {
+    padding: 10px 0px;
+    max-width: 100vw;
+  }
+
+  .dashboard-content {
+    padding: 10px 5px;
+    margin: 15px;
+  }
+  
+  .notes-list { /* Renamed class */
+    /* Adjust columns for wider tiles */
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 15px;
+  }
+  
+  .note-tile {
+     height: 140px; /* Adjust height for smaller screens */
+     /* Width is handled by grid */
+  }
+
+  /* Adjust text sizes for smaller screens if needed */
+   .text { /* Title */
+     font-size: 15px;
+   }
+   .note-date {
+     font-size: 10px;
+   }
+   .note-excerpt {
+     font-size: 11px;
+     -webkit-line-clamp: 1; /* Show only 1 line on smaller screens */
+   }
+   /* Remove item-icon styles */
+}
+
+/* Further adjustments for very small screens */
+@media (max-width: 480px) {
+  .notes-list { /* Renamed class */
+    /* Single column on very small screens */
+    grid-template-columns: 1fr;
+    gap: 15px; /* Consistent gap */
+  }
+
+  .note-tile {
+    height: 130px; /* Adjust height */
+  }
+
+   /* Adjust text sizes */
+   .text { /* Title */
+     font-size: 16px;
+   }
+   .note-date {
+     font-size: 11px;
+   }
+   .note-excerpt {
+     font-size: 12px;
+     -webkit-line-clamp: 2; /* Allow 2 lines again */
+   }
+   /* Remove item-icon styles */
+}
+
+/* Remove item-icon styles */
+
+
+/* Floating Action Button (FAB) Styles - Adapted from Floating Recording Button Component.md */
+.action-button-wrapper {
+  position: fixed; /* Keep button fixed */
+  bottom: 30px; /* Adjust vertical position */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100; /* Ensure it's above other content */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.action-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 70px; /* Button size */
+  height: 70px;
+  cursor: pointer; /* Make the whole container clickable */
+}
+.action-button {
+  background: #0a0a0a;
+  border: none;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%; /* Circular */
+  color: white;
+  font-size: 24px; /* Icon size */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease; /* Smooth transition */
+  position: relative;
+  z-index: 1; /* Button above effects */
+}
+.action-container:hover .action-button {
+   background: #1a1a1a; /* Slightly lighter on hover */
+}
+.action-container:active .action-button {
+   transform: scale(0.95); /* Click effect */
+}
+
+/* FAB Hover/Animation Effects */
+.action-white, .action-border, .action-darkBorderBg, .action-glow {
+  position: absolute;
+  overflow: hidden;
+  z-index: 0; /* Effects behind button */
+  border-radius: 50%;
+  filter: blur(3px);
+  width: 80px; /* Slightly larger than button */
+  height: 80px;
+  pointer-events: none; /* Prevent effects from intercepting clicks */
+}
+.action-white { max-height: 73px; max-width: 73px; border-radius: 50%; filter: blur(2px); }
+.action-white::before { content: ""; z-index: -2; text-align: center; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(83deg); position: absolute; width: 600px; height: 600px; background-repeat: no-repeat; background-position: 0 0; filter: brightness(1.4); background-image: conic-gradient( rgba(0, 0, 0, 0) 0%, #a099d8, rgba(0, 0, 0, 0) 8%, rgba(0, 0, 0, 0) 50%, #dfa2da, rgba(0, 0, 0, 0) 58% ); transition: transform 2s cubic-bezier(0.165, 0.84, 0.44, 1); }
+
+.action-border { max-height: 79px; max-width: 79px; border-radius: 50%; filter: blur(0.5px); }
+.action-border::before { content: ""; z-index: -2; text-align: center; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(70deg); position: absolute; width: 600px; height: 600px; filter: brightness(1.3); background-repeat: no-repeat; background-position: 0 0; background-image: conic-gradient( #1c191c, #402fb5 5%, #1c191c 14%, #1c191c 50%, #cf30aa 60%, #1c191c 64% ); transition: transform 2s cubic-bezier(0.165, 0.84, 0.44, 1); }
+
+.action-darkBorderBg { max-height: 75px; max-width: 75px; border-radius: 50%; }
+.action-darkBorderBg::before { content: ""; z-index: -2; text-align: center; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(82deg); position: absolute; width: 600px; height: 600px; background-repeat: no-repeat; background-position: 0 0; background-image: conic-gradient( rgba(0, 0, 0, 0), #18116a, rgba(0, 0, 0, 0) 10%, rgba(0, 0, 0, 0) 50%, #6e1b60, rgba(0, 0, 0, 0) 60% ); transition: transform 2s cubic-bezier(0.165, 0.84, 0.44, 1); }
+
+.action-glow { overflow: hidden; filter: blur(30px); opacity: 0.4; max-height: 130px; max-width: 130px; border-radius: 50%; }
+.action-glow::before { content: ""; z-index: -2; text-align: center; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(60deg); position: absolute; width: 999px; height: 999px; background-repeat: no-repeat; background-position: 0 0; background-image: conic-gradient( #000, #402fb5 5%, #000 38%, #000 50%, #cf30aa 60%, #000 87% ); transition: transform 2s cubic-bezier(0.165, 0.84, 0.44, 1); }
+
+/* FAB Hover animations */
+.action-container:hover > .action-darkBorderBg::before { transform: translate(-50%, -50%) rotate(262deg); }
+.action-container:hover > .action-glow::before { transform: translate(-50%, -50%) rotate(240deg); }
+.action-container:hover > .action-white::before { transform: translate(-50%, -50%) rotate(263deg); }
+.action-container:hover > .action-border::before { transform: translate(-50%, -50%) rotate(250deg); }

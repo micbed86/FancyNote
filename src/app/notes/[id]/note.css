@@ -1,0 +1,1637 @@
+/* Note Page Styles */
+/* .project-container { ... } - Commented out as layout is handled by DashboardLayout + container */
+
+/* Renamed to note-header to match JSX */
+.note-header {
+  display: flex; /* Use flexbox */
+  justify-content: space-between; /* Push title left, menu right */
+  align-items: center; /* Vertically align items */
+  margin-bottom: 20px; /* Add some space below */
+  /* Remove margin-top from .note-title-container if defined here */
+}
+
+.note-title-container { /* Renamed class */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-grow: 1; /* Allow title to take available space */
+}
+
+/* Remove .project-title container style, apply directly to h2 and input */
+
+/* Style for the H2 title itself (using .header2 style) */
+.note-title-container h2.header2 {
+  /* Gradient is applied via .header2 class from UI kit/global styles if available */
+  /* If not globally available, add gradient here: */
+  /* background: linear-gradient(90deg, #c6008d, #007bff); */
+  /* -webkit-background-clip: text; */
+  /* background-clip: text; */
+  /* color: transparent; */
+  margin: 0; /* Reset margin */
+  display: inline; /* Match header style */
+  box-decoration-break: clone; /* Match header style */
+  padding-right: 0.1em; /* Match header style */
+  font-size: 1.4rem; /* Match header2 */
+  font-weight: bold; /* Match header2 */
+}
+
+/* Style for the title input */
+.note-title-input { /* Renamed class */
+  /* width: 100%; */ /* Let flexbox handle width? Or set specific width */
+  font-size: 20px; /* From snippet */
+  padding: 10px; /* From snippet */
+  border: 1px solid #ccc; /* From snippet */
+  border-radius: 4px; /* From snippet */
+  transition: border-color 0.3s ease; /* From snippet */
+  /* Add background/color for dark mode */
+  background: rgba(20, 20, 20, 0.4);
+  color: white;
+  text-align: left; /* Align input text left */
+  /* Inherit font size/weight from h2 for consistency when editing */
+  font-size: 1.4rem;
+  font-weight: bold;
+  line-height: normal; /* Reset line-height */
+  flex-grow: 1; /* Allow input to grow */
+  max-width: calc(100% - 50px); /* Prevent overlapping with menu */
+}
+
+.note-title-input:focus { /* Renamed class */
+  border-color: #007bff; /* From snippet */
+  outline: none; /* From snippet */
+  box-shadow: 0 0 15px rgba(0, 123, 255, 0.4); /* Add focus glow */
+}
+
+/* Remove duplicate .project-title-input style block */
+
+.edit-title-button { /* Renamed class to match JSX */
+  background: none;
+  border: none;
+  color: #a0a0a0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-title-button:hover { /* Renamed class */
+  color: #8a2be2;
+}
+
+.note-actions-menu { /* Renamed class */
+  position: relative;
+  flex-shrink: 0; /* Prevent menu from shrinking */
+}
+
+.menu-toggle-button { /* Renamed class to match JSX */
+  background: none;
+  border: none;
+  color: #a0a0a0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.menu-toggle-button:hover { /* Renamed class */
+  color: #8a2be2;
+}
+
+/* .menu-content is replaced by .dropdown-menu */
+
+.btn-delete-note { /* Renamed class */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1px solid #ff6b6b; /* Corrected border property */
+  color: #ff6b6b;
+  padding: 8px;
+  width: 150px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  flex-direction: row;
+  align-content: center;
+  justify-content: center;
+}
+
+.btn-delete-note:hover { /* Renamed class */
+  background: rgba(255, 107, 107, 0.1);
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.1);
+}
+
+/* Remove .menu-icon, icons are styled directly or via button */
+
+/* Dropdown Menu Styles from titleUI.md */
+.dropdown-menu {
+  /* display: none; */ /* Controlled by React state */
+  position: absolute;
+  background-color: #2a2a2a; /* Darker background for theme */
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); /* Stronger shadow */
+  z-index: 10; /* Ensure it's above other content */
+  border-radius: 8px; /* Match other elements */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 5px 0; /* Add some padding */
+  /* Position is handled by inline styles in JSX for now */
+}
+
+.dropdown-item {
+  color: #e0e0e0; /* Light text color */
+  padding: 10px 15px; /* Adjust padding */
+  text-decoration: none;
+  display: block;
+  background: none; /* Ensure button background is transparent */
+  border: none; /* Ensure button border is none */
+  width: 100%; /* Make button fill width */
+  text-align: left; /* Align text left */
+  cursor: pointer;
+  font-size: 14px; /* Adjust font size */
+}
+
+.dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.1); /* Subtle hover */
+}
+
+/* Specific styling for danger items */
+.dropdown-item.button-danger {
+  color: #ff6b6b; /* Danger color */
+}
+.dropdown-item.button-danger:hover {
+  background-color: rgba(255, 107, 107, 0.1); /* Danger hover */
+  color: #ff4d4d; /* Darker danger color on hover */
+}
+
+
+/* Timestamp Style - From Note View Container Component.md */
+.timestamp {
+  font-size: 13px;
+  color: #a0a0a0;
+  margin-top: -15px; /* Adjust position relative to header */
+  margin-bottom: 15px; /* Reduced bottom margin */
+  padding-left: 5px; /* Align slightly with title */
+}
+
+/* Main Content Area Wrapper */
+.note-content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 25px; /* Space between editor, images, attachments */
+}
+
+/* WYSIWYG Editor Styles - From Note View Container Component.md */
+.wysiwyg-editor {
+  min-height: 250px; /* Increased min-height */
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  color: white;
+  background: rgba(20, 20, 20, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  line-height: 1.6;
+}
+.wysiwyg-editor:focus-within { /* Use focus-within for contenteditable */
+  border-color: #8a2be2; /* Accent color focus */
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+.wysiwyg-editor img { /* Style embedded images within editor */
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 15px 0;
+  display: block; /* Ensure images are block elements */
+}
+ .wysiwyg-editor a { /* Style links within editor */
+    color: #8ab4f8; /* Consistent link color */
+    text-decoration: none;
+    transition: color 0.3s ease;
+ }
+ .wysiwyg-editor a:hover {
+     color: #a3c7f9;
+ }
+ .wysiwyg-editor i { /* Style icons next to links if used */
+    margin-right: 5px;
+    font-size: 0.9em;
+ }
+
+/* --- Embedded Images Section --- */
+.embedded-images-section summary {
+  list-style: none; /* Remove default marker */
+  cursor: pointer;
+  font-weight: bold;
+  color: #e0e0e0;
+  margin-bottom: 10px;
+  display: flex; /* Align icon */
+  align-items: center;
+  gap: 8px;
+}
+.embedded-images-section summary::-webkit-details-marker {
+  display: none; /* Hide marker in Chrome/Safari */
+}
+.embedded-images-section summary::before { /* Custom marker */
+  content: '▶'; /* Collapsed state */
+  font-size: 0.8em;
+  transition: transform 0.2s ease-in-out;
+  display: inline-block;
+}
+.embedded-images-section[open] > summary::before {
+  transform: rotate(90deg); /* Expanded state */
+}
+
+.image-thumbnail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  padding-left: 20px; /* Indent thumbnails */
+}
+
+.thumbnail-item {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.thumbnail-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.thumbnail-delete-btn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: rgba(255, 107, 107, 0.8); /* Danger color background */
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  line-height: 20px; /* Center icon vertically */
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.thumbnail-delete-btn svg { /* Style icon inside button */
+  width: 10px;
+  height: 10px;
+}
+
+.thumbnail-item:hover .thumbnail-delete-btn {
+  opacity: 1;
+}
+
+/* --- Attachments Section --- */
+.attachments-section {
+  margin-top: 20px; /* Space above attachments */
+  padding-top: 20px; /* Space above attachments */
+  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Separator line */
+}
+
+.attachments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.attachments-header h3.header3 { /* Style the header text */
+   margin-bottom: 0; /* Remove default margin */
+}
+
+.attachment-actions { /* Container for add buttons */
+  display: flex;
+  gap: 10px;
+}
+
+.attachment-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Attachment List Item Style - Adapted from Recording Modal */
+.attachment-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.attachment-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden; /* Prevent long names breaking layout */
+  flex-grow: 1; /* Allow info to take available space */
+}
+.attachment-info i { /* File type icon */
+  font-size: 1.2em;
+  color: #ccc;
+  flex-shrink: 0;
+}
+.attachment-info span { /* Filename */
+  font-size: 14px;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attachment-item .checkbox-wrapper {
+  margin-left: auto; /* Push checkbox to the right */
+  flex-shrink: 0; /* Prevent checkbox shrinking */
+}
+.attachment-delete-btn { /* Simple delete button for attachments */
+  background: none;
+  border: none;
+  color: #ff6b6b; /* Danger color */
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 10px; /* Space before delete button */
+}
+.attachment-delete-btn:hover {
+  color: #ff4d4d;
+}
+.attachment-delete-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- Bottom Action Buttons --- */
+.note-actions { /* Renamed from Note View Container */
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end; /* Align buttons to the right */
+  margin-top: 25px; /* Space above buttons */
+  padding-top: 20px; /* Space above buttons */
+  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Separator line */
+}
+/* Use standard-button styles defined elsewhere or copy here if needed */
+
+/* Card Styles (Can be used for sections within content area if needed) */
+.card {
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.card-title {
+  font-size: 20px;
+  background: linear-gradient(90deg, #c6008d, #007bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+/* Input Card Styles */
+.input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.textarea-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.textarea-container textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 12px 15px;
+  font-size: 16px;
+  color: white;
+  background: rgba(20, 20, 20, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+  resize: vertical;
+}
+
+.textarea-container textarea:focus {
+  border-color: #8a2be2;
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+/* Focus Instructions Textarea Styling */
+#focus-instructions {
+  width: 100%;
+  min-height: 150px;
+  padding: 12px 15px;
+  font-size: 16px;
+  color: white;
+  background: rgba(20, 20, 20, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+  resize: vertical;
+}
+
+#focus-instructions:focus {
+  border-color: #8a2be2;
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+/* Topics Limit Input Styling */
+#topics-limit {
+  width: 150px; 
+  padding: 12px 15px;
+  font-size: 16px;
+  color: white;
+  background: rgba(20, 20, 20, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+#topics-limit:focus {
+  border-color: #8a2be2;
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+.file-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pdf-dropzone {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(20, 20, 20, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dropzone-note {
+  color: #a0a0a0;
+  font-size: 14px;
+  margin-top: 5px;
+
+}
+
+.pdf-dropzone:hover {
+  border-color: #8a2be2;
+  background: rgba(138, 43, 226, 0.1);
+}
+
+.pdf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.pdf-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(20, 20, 20, 0.4);
+  border-radius: 8px;
+  padding: 10px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pdf-item:hover {
+  background: rgba(30, 30, 30, 0.6);
+  border-color: rgba(138, 43, 226, 0.4);
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.1);
+}
+
+.pdf-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+}
+
+.remove-pdf-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.remove-pdf-btn:hover {
+  transform: scale(1.1);
+  color: #ff4040;
+}
+
+/* Preview Modal Styles */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(8px);
+  display: flex;
+  z-index: 1000;
+}
+
+.preview-content {
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 80%;
+  max-width: 800px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preview-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+}
+
+.close-preview {
+  background: none;
+  border: none;
+  color: #a0a0a0;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.3s ease;
+}
+
+.close-preview:hover {
+  color: #fff;
+}
+
+.preview-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.preview-body pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #fff;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Tune Card Styles */
+.collapsible-card {
+  overflow: hidden;
+}
+
+.collapsible-card summary {
+  list-style: none;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Styling for the collapse button in cards */
+.card .btn-collapse {
+  color: #c6008d;
+  transition: transform 0.3s ease;
+  display: inline-block;
+  margin-left: 5px;
+}
+
+.card .btn-collapse {
+  color: #c6008d;
+  transition: transform 0.3s ease;
+  display: inline-block;
+  margin-left: 5px;
+  transform: rotate(0deg);
+}
+
+.card .btn-collapse.collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Animation for collapsible cards */
+.collapsible-card[open] > summary ~ * {
+  animation: slide-down 0.3s ease-in-out;
+}
+
+.collapsible-card:not([open]) > summary ~ * {
+  animation: slide-up 0.3s ease-in-out;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    margin-top: initial;
+    margin-bottom: initial;
+    padding-top: initial;
+    padding-bottom: initial;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 1;
+    max-height: 1000px;
+    margin-top: initial;
+    margin-bottom: initial;
+    padding-top: initial;
+    padding-bottom: initial;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+.tune-container {
+  margin-top: 20px;
+}
+
+.outline-mode {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.outline-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tune-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.depth-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.depth-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 20%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 20, 20, 0.4);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.depth-button:hover {
+  background: rgba(138, 43, 226, 0.2);
+  border-color: #8a2be2;
+}
+
+.depth-button.active {
+  background: rgba(138, 43, 226, 0.4);
+  border-color: #8a2be2;
+}
+
+.custom-checkbox {
+  --checkbox-size: 25px;
+  --checkbox-color: #8a2be2;
+  --checkbox-shadow: rgba(138, 43, 226, 0.3);
+  --checkbox-border: rgba(138, 43, 226, 0.7);
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  padding: 5px;
+  flex-shrink: 0;
+}
+
+.custom-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.custom-checkbox span {
+  margin-left: 15px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.custom-checkbox:hover span {
+  color: var(--checkbox-color);
+}
+
+.custom-checkbox .checkmark {
+  position: relative;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  border: 2px solid var(--checkbox-border);
+  border-radius: 8px;
+  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(20, 20, 20, 0.4);
+  box-shadow: 0 0 15px var(--checkbox-shadow);
+  overflow: hidden;
+}
+
+.custom-checkbox .checkmark::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, var(--checkbox-color), #c600c3);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transform: scale(0) rotate(-45deg);
+}
+
+.custom-checkbox .checkmark::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s ease;
+  background-image: url("data:image/svg+xml,%3Csvg stroke='white' fill='none' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke-linejoin='round' stroke-linecap='round' stroke-width='3' d='M20 6L9 17L4 12'%3E%3C/path%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 1;
+}
+
+.custom-checkbox:hover .checkmark {
+  border-color: var(--checkbox-color);
+  transform: scale(1.05);
+  box-shadow: 
+    0 0 20px var(--checkbox-shadow),
+    0 0 40px var(--checkbox-shadow),
+    inset 0 0 10px var(--checkbox-shadow);
+}
+
+.custom-checkbox input:checked ~ span {
+  color: var(--checkbox-color);
+}
+
+.custom-checkbox input:checked ~ .checkmark::before {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+}
+
+.custom-checkbox input:checked ~ .checkmark::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.custom-checkbox input:checked ~ .checkmark {
+  border-color: transparent;
+  animation: checkbox-pulse 1s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* Custom Radio Button Styling */
+.custom-radio {
+  --radio-size: 25px;
+  --radio-color: #8a2be2;
+  --radio-shadow: rgba(138, 43, 226, 0.3);
+  --radio-border: rgba(138, 43, 226, 0.7);
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  padding: 5px;
+  flex-shrink: 0;
+  margin-right: 15px;
+}
+
+.custom-radio input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.custom-radio span {
+  margin-left: 15px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.custom-radio:hover span {
+  color: var(--radio-color);
+}
+
+.custom-radio .radiomark {
+  position: relative;
+  width: var(--radio-size);
+  height: var(--radio-size);
+  border: 2px solid var(--radio-border);
+  border-radius: 50%;
+  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(20, 20, 20, 0.4);
+  box-shadow: 0 0 15px var(--radio-shadow);
+  overflow: hidden;
+}
+
+.custom-radio .radiomark::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, var(--radio-color), #c600c3);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transform: scale(0);
+  border-radius: 50%;
+}
+
+.custom-radio .radiomark::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.custom-radio:hover .radiomark {
+  border-color: var(--radio-color);
+  transform: scale(1.05);
+  box-shadow: 
+    0 0 20px var(--radio-shadow),
+    0 0 40px var(--radio-shadow),
+    inset 0 0 10px var(--radio-shadow);
+}
+
+.custom-radio input:checked ~ span {
+  color: var(--radio-color);
+}
+
+.custom-radio input:checked ~ .radiomark::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.custom-radio input:checked ~ .radiomark::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.custom-radio input:checked ~ .radiomark {
+  border-color: transparent;
+  animation: radio-pulse 1s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+@keyframes radio-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 15px var(--radio-shadow);
+  }
+  50% {
+    transform: scale(0.95);
+    box-shadow:
+      0 0 25px var(--radio-shadow),
+      0 0 40px var(--radio-shadow);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px var(--radio-shadow);
+  }
+}
+
+@keyframes checkbox-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 15px var(--checkbox-shadow);
+  }
+  50% {
+    transform: scale(0.95);
+    box-shadow:
+      0 0 25px var(--checkbox-shadow),
+      0 0 40px var(--checkbox-shadow);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px var(--checkbox-shadow);
+  }
+}
+
+/* Language Selection Styling */
+.language-selection-container {
+  display: flex;
+  max-width: max-content;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#language-selection {
+  width: 100%;
+  padding: 12px 35px 12px 15px;
+  margin-top: 10px;
+  font-size: 16px;
+  color: white;
+  background: #1b1b1b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+#language-selection:focus {
+  border-color: #8a2be2;
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+/* Fine-tune Card Styles */
+.fine-tune-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
+
+/* Action Button Styling */
+.action-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0 auto;
+}
+
+.action-white,
+.action-border,
+.action-darkBorderBg,
+.action-glow {
+  max-height: 70px;
+  max-width: 314px;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  overflow: hidden;
+  z-index: -1;
+  border-radius: 12px;
+  filter: blur(3px);
+}
+
+.btn-primary {
+  background: #0a0a0a;
+  border: none;
+  width: 301px;
+  height: 56px;
+  border-radius: 10px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: opacity 0.3s;
+  position: relative;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+#pink-mask {
+  pointer-events: none;
+  width: 30px;
+  height: 20px;
+  position: absolute;
+  background: #cf30aa;
+  top: 10px;
+  left: 5px;
+  filter: blur(20px);
+  opacity: 0.8;
+  transition: all 2s;
+}
+
+.btn-primary:hover > #pink-mask {
+  opacity: 0;
+}
+
+.action-white {
+  max-height: 63px;
+  max-width: 307px;
+  border-radius: 10px;
+  filter: blur(2px);
+}
+
+.action-white::before {
+  content: "";
+  z-index: -2;
+  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(83deg);
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  filter: brightness(1.4);
+  background-image: conic-gradient(
+      rgba(0, 0, 0, 0) 0%,
+      #a099d8,
+      rgba(0, 0, 0, 0) 8%,
+      rgba(0, 0, 0, 0) 50%,
+      #dfa2da,
+      rgba(0, 0, 0, 0) 58%
+  );
+  transition: all 2s;
+}
+
+.action-border {
+  max-height: 59px;
+  max-width: 303px;
+  border-radius: 11px;
+  filter: blur(0.5px);
+}
+
+.action-border::before {
+  content: "";
+  z-index: -2;
+  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(70deg);
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  filter: brightness(1.3);
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-image: conic-gradient(
+      #1c191c,
+      #402fb5 5%,
+      #1c191c 14%,
+      #1c191c 50%,
+      #cf30aa 60%,
+      #1c191c 64%
+  );
+  transition: all 2s;
+}
+
+.action-darkBorderBg {
+  max-height: 65px;
+  max-width: 312px;
+}
+
+.action-darkBorderBg::before {
+  content: "";
+  z-index: -2;
+  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(82deg);
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-image: conic-gradient(
+      rgba(0, 0, 0, 0),
+      #18116a,
+      rgba(0, 0, 0, 0) 10%,
+      rgba(0, 0, 0, 0) 50%,
+      #6e1b60,
+      rgba(0, 0, 0, 0) 60%
+  );
+  transition: all 2s;
+}
+
+.action-container:hover > .action-darkBorderBg::before {
+  transform: translate(-50%, -50%) rotate(-98deg);
+}
+
+.action-container:hover > .action-glow::before {
+  transform: translate(-50%, -50%) rotate(-120deg);
+}
+
+.action-container:hover > .action-white::before {
+  transform: translate(-50%, -50%) rotate(-97deg);
+}
+
+.action-container:hover > .action-border::before {
+  transform: translate(-50%, -50%) rotate(-110deg);
+}
+
+.action-glow {
+  overflow: hidden;
+  filter: blur(30px);
+  opacity: 0.4;
+  max-height: 130px;
+  max-width: 354px;
+}
+
+.action-glow::before {
+  content: "";
+  z-index: -2;
+  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(60deg);
+  position: absolute;
+  width: 999px;
+  height: 999px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-image: conic-gradient(
+      #000,
+      #402fb5 5%,
+      #000 38%,
+      #000 50%,
+      #cf30aa 60%,
+      #000 87%
+  );
+  transition: all 2s;
+}
+
+#process-progress {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+#process-progress::-webkit-progress-bar {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+#process-progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #c6008d, #007bff);
+}
+
+/* Outline Editor */
+.output-card, .outline-card {
+  margin-top: 0px;
+}
+
+.outline-container {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  background: rgba(20, 20, 20, 0.2);
+}
+
+.outline-preview-container {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.generate-clus-container {
+  margin-top: 16px;
+}
+
+.clus-card {
+  margin-top: 20px;
+  background: rgba(47, 21, 72, 0.2);
+}
+
+/* Style for the card title with export button */
+.clus-card .card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Position the export button in the card title */
+.clus-card .export-button-container {
+  margin-left: auto;
+  margin-right: 10px;
+}
+
+.clus-container {
+  padding: 0 16px 16px;
+}
+
+.clu-progress-container {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.clu-progress-container h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+#clu-process-progress {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  appearance: none;
+  background-color: #f0f0f0;
+}
+
+#clu-process-progress::-webkit-progress-bar {
+  background-color: #f0f0f0;
+  border-radius: 4px;
+}
+
+#clu-process-progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 4px;
+}
+
+#clu-process-progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 4px;
+}
+
+.outline-items {
+  min-height: 100px;
+}
+
+.outline-placeholder {
+  color: #a0a0a0;
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+}
+
+.btn-add-item {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(138, 43, 226, 0.2);
+  border: 1px solid rgba(138, 43, 226, 0.4);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: 15px auto 0;
+  transition: all 0.3s ease;
+}
+
+.btn-add-item:hover {
+  background: rgba(138, 43, 226, 0.4);
+  transform: scale(1.05);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .project-container {
+    padding: 0 15px; /* Slightly more padding */
+    gap: 20px; /* Reduce gap between sections */
+  }
+
+  .project-header {
+    flex-direction: column; /* Stack header items */
+    align-items: flex-start; /* Align items to the start */
+    gap: 10px; /* Add gap between stacked items */
+  }
+
+  .project-title-input {
+    width: 100%; /* Make title input full width */
+  }
+
+  .project-menu {
+    align-self: flex-end; /* Keep menu button to the right */
+  }
+  
+  .tune-options {
+    grid-template-columns: 1fr;
+  }
+
+  .outline-mode {
+    flex-direction: column; /* Stack outline sections */
+    gap: 15px;
+  }
+  
+  .fine-tune-options {
+    grid-template-columns: 1fr 1fr; /* Keep 2 columns for medium screens */
+    gap: 15px; /* Reduce gap */
+  }
+
+  /* Reduce padding inside cards on mobile */
+  .card {
+    padding: 20px; /* Keep reasonable padding */
+  }
+
+  /* Adjust text area height */
+  .textarea-container textarea,
+  #focus-instructions {
+    min-height: 100px; /* Make text areas shorter */
+    font-size: 14px; /* Slightly smaller font */
+  }
+
+  /* Adjust file dropzone padding */
+  .pdf-dropzone {
+    padding: 20px 15px;
+  }
+
+  /* Adjust card title size */
+  .card-title {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  /* Adjust project title size */
+  .project-title,
+  .project-title-input {
+    font-size: 20px;
+  }
+  
+  /* Make action buttons slightly smaller */
+  .btn-primary {
+    width: 280px; /* Adjust width */
+    height: 50px; /* Adjust height */
+    font-size: 15px;
+  }
+  .action-container {
+    /* Adjust container if needed based on button size */
+  }
+  .action-white,
+  .action-border,
+  .action-darkBorderBg,
+  .action-glow {
+    /* Adjust max-height/width if needed */
+    max-height: 60px; 
+    max-width: 290px; 
+  }
+
+}
+
+/* Further adjustments for very small screens */
+@media (max-width: 480px) {
+  
+  .content-area {
+    padding: 20px 0px;
+    max-width: 100vw;
+  }
+  
+  .project-container {
+    padding: 0 10px; /* Reduce padding further */
+  }
+
+  .card {
+    padding: 3px; /* Reduce card padding */
+  }
+
+  .card-title {
+    padding: 5px;
+    font-size: 17px; /* Smaller card titles */
+  }
+
+  .project-title,
+  .project-title-input {
+    font-size: 18px; /* Smaller project title */
+  }
+
+  .textarea-container textarea,
+  #focus-instructions {
+    font-size: 13px; /* Smaller text area font */
+  }
+
+  .fine-tune-options {
+    grid-template-columns: 1fr; /* Switch fine-tune options to single column */
+  }
+
+  .btn-primary {
+    width: 100%; /* Make action button full width */
+    max-width: 280px; /* But limit max width */
+    height: 48px; 
+    font-size: 14px;
+  }
+  .action-container {
+     width: 100%; 
+     max-width: 290px;
+  }
+   .action-white,
+  .action-border,
+  .action-darkBorderBg,
+  .action-glow {
+    max-width: 100%;
+  }
+
+  .pdf-dropzone {
+    padding: 15px 10px; /* Smaller dropzone padding */
+    font-size: 13px;
+    word-wrap: break-word; /* Ensure text wraps */
+    white-space: normal; /* Force wrapping */
+    line-height: 1.4; /* Improve readability of wrapped text */
+  }
+
+  .dropzone-note {
+    font-size: 12px;
+    word-wrap: break-word; /* Ensure text wraps */
+    white-space: normal; /* Force wrapping */
+  }
+
+  .pdf-item {
+    padding: 8px 12px; /* Smaller PDF item padding */
+    font-size: 13px;
+    align-items: flex-start; /* Align items top if name wraps */
+  }
+
+  /* Allow PDF names to wrap on small screens */
+  .pdf-name {
+    white-space: normal; /* Allow wrapping */
+    word-wrap: break-word; /* Break long words */
+    overflow: visible; /* Remove overflow hidden */
+    text-overflow: clip; /* Remove ellipsis */
+    max-width: none; /* Allow full width */
+    flex: 1; /* Allow shrinking/growing */
+    margin-right: 5px; /* Add space before remove button */
+  }
+
+  .remove-pdf-btn {
+     flex-shrink: 0; /* Prevent remove button from shrinking */
+  }
+
+
+  /* Ensure outline items don't overflow */
+  /* Assuming outline items might have a class like .outline-item-content or similar */
+  /* Let's target the container first */
+  .outline-container {
+     padding: 0px; /* Reduce padding */
+     overflow: hidden; /* Prevent children from breaking out */
+  }
+
+  .outline-item {
+     padding: 3px; /* Reduce padding */
+     margin: 0px; /* Remove margin */
+     overflow: hidden; /* Prevent children from breaking out */
+  }
+
+  .outline-children {
+    padding-left: 5px;
+  }
+  /* Adjust outline item header for wrapping */
+  .outline-item-header {
+    flex-wrap: wrap; /* Allow header items to wrap */
+    gap: 5px; /* Add small gap for wrapped items */
+  }
+
+  /* Make title input flexible and prevent overflow */
+  .outline-item .item-title {
+    flex: 1 1 auto; /* Allow shrinking and growing */
+    min-width: 120px; /* Minimum width before shrinking further */
+    /* text-overflow: ellipsis; might not work well on input */
+  }
+
+  /* Ensure action buttons container can wrap too */
+  .outline-item .item-actions {
+    flex-wrap: wrap;
+    gap: 2px; /* Smaller gap for buttons */
+  }
+
+   /* Add wrapping for description and keywords just in case */
+  .outline-item .item-description,
+  .outline-item .item-keywords {
+    word-wrap: break-word;
+    white-space: normal; /* Ensure wrapping */
+    font-size: 13px; /* Match other small screen fonts */
+  }
+
+  .clus-container {
+    padding: 3px; /* Reduce padding */
+  }
+
+  .clu-item {
+    padding: 8px 2px; /* Reduce padding */
+    margin: 0px; /* Remove margin */
+  }
+ 
+  .clu-children {
+    padding-left: 3px;
+  }
+
+  .practice-controls {
+    padding: 4px; /* Reduce padding */
+  }
+
+  .btn-close-practice {
+    position: relative;
+    align-self: right;
+    top: 0;
+    right: 0;
+    margin-top: 0px;
+  }
+
+  .clu-item-content {
+    padding: 5px; /* Reduce padding */
+    margin: 0px; /* Remove margin */
+  }
+
+  .clu-textarea {
+    width: 100%;
+  }
+
+
+  .clu-item-header {
+    position: relative;
+    font-size: 10px;
+    margin-bottom: 5px;
+    overflow-wrap: anywhere;
+  }
+}
+  

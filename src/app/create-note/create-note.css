@@ -1,0 +1,208 @@
+/* Create Note Page Styles */
+
+.create-note-container {
+  display: flex;
+  flex-direction: column;
+  gap: 25px; /* Space between sections */
+  max-width: 800px; /* Limit width */
+  margin: 0 auto; /* Center container */
+}
+
+/* Use card styles from item.css or define here if needed */
+/* Assuming .card is defined globally or in a shared file */
+.card {
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Section Headers (Assuming .header3 is global or defined elsewhere) */
+.card h3.header3 {
+  margin-bottom: 15px;
+}
+
+/* Recording Section */
+.recording-section .recording-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.record-button {
+  /* Style similar to FAB but maybe slightly smaller */
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100px; /* Adjust size */
+  height: 50px;
+  border-radius: 25px; /* Pill shape */
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+.record-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.record-button:hover {
+  background: #1a1a1a;
+  border-color: #8a2be2;
+  box-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
+}
+
+.record-button.recording {
+  background: #c6008d; /* Use accent color when recording */
+  border-color: #c6008d;
+  box-shadow: 0 0 15px rgba(198, 0, 141, 0.5);
+  animation: pulseRecording 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseRecording {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.98); }
+}
+
+/* TODO: Add styles for playback controls if needed */
+
+/* Manual Text Section */
+.manual-text-section .textarea {
+  /* Assuming .textarea style is global or defined elsewhere */
+  min-height: 150px; /* Adjust height as needed */
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 16px;
+  color: white;
+  background: rgba(20, 20, 20, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+  resize: vertical;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.manual-text-section .textarea:focus {
+  border-color: #8a2be2;
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+
+/* Attachments Section */
+/* Reusing styles from item.css where possible */
+.attachments-section .attachments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.attachments-section .attachments-header h3.header3 {
+   margin-bottom: 0;
+}
+
+.attachments-section .attachment-actions {
+  display: flex;
+  gap: 10px;
+}
+/* Ensure standard-button styles are available */
+.attachments-section .attachment-actions .standard-button {
+  padding: 8px 10px; /* Slightly smaller buttons */
+}
+.attachments-section .attachment-actions .standard-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+
+.attachments-section .attachment-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.attachments-section .no-attachments {
+  color: #a0a0a0;
+  font-style: italic;
+  padding: 10px 0;
+}
+
+/* Reusing attachment-item styles from item.css */
+.attachments-section .attachment-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.attachments-section .attachment-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  flex-grow: 1;
+}
+.attachments-section .attachment-info i,
+.attachments-section .attachment-info svg { /* Allow SVG icons too */
+  font-size: 1.2em;
+  width: 1.2em; /* Ensure SVG size consistency */
+  height: 1.2em;
+  color: #ccc;
+  flex-shrink: 0;
+}
+.attachments-section .attachment-info span {
+  font-size: 14px;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attachments-section .attachment-item .checkbox-wrapper {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.attachments-section .attachment-delete-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+.attachments-section .attachment-delete-btn:hover {
+  color: #ff4d4d;
+}
+.attachments-section .attachment-delete-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Main Action Buttons */
+.create-note-actions {
+  display: flex;
+  justify-content: flex-end; /* Align to right */
+  gap: 15px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Separator */
+}
+/* Use standard-button styles */
