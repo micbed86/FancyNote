@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react'; // Added useRef, useEffect
+import { useState, useRef, useEffect, useCallback } from 'react'; // Added useCallback
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
@@ -10,6 +10,7 @@ import './create-note.css'; // Link to the CSS file we will create
 export default function CreateNotePage() {
   const router = useRouter();
   const [manualText, setManualText] = useState('');
+  const [noteTitle, setNoteTitle] = useState('New Note'); // Add state for title
   const [attachments, setAttachments] = useState([]); // Store { file: File, includeInContext: boolean } objects
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null); // Store recorded audio Blob
@@ -18,8 +19,11 @@ export default function CreateNotePage() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const audioPlayerRef = useRef(null); // Ref for the <audio> element
+  const timerIntervalRef = useRef(null); // Ref for the recording timer interval
+  const [recordingTime, setRecordingTime] = useState(0); // State for recording duration in seconds
   const [isProcessing, setIsProcessing] = useState(false); // State for processing status
   const [processError, setProcessError] = useState(''); // State for processing errors
+  const cameraInputRef = useRef(null); // Ref for the hidden camera input
   const handleAddFile = (event) => {
     const newFiles = Array.from(event.target.files);
     // Optional: Add checks for file size, type, or duplicate names
@@ -36,12 +40,24 @@ export default function CreateNotePage() {
     event.target.value = null;
   };
 
+  // Trigger the hidden camera input
   const handleTakePhoto = () => {
-    // TODO: Implement camera integration logic
-    console.log('Take photo clicked');
+    cameraInputRef.current?.click();
   };
 
-  const startRecording = async () => {
+  // Handle the photo captured via the camera input
+  const handlePhotoCaptured = (event) => {
+    const capturedPhoto = event.target.files?.[0];
+    if (capturedPhoto) {
+      console.log('Photo captured:', capturedPhoto);
+      setAttachments(prev => [...prev, { file: capturedPhoto, includeInContext: true }]);
+    }
+    // Clear the input value to allow capturing again if needed
+    event.target.value = null;
+  };
+
+  // Use useCallback to memoize startRecording if needed, though dependencies are minimal here
+  const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -67,18 +83,28 @@ export default function CreateNotePage() {
       setAudioBlob(null); // Clear previous recording
       setAudioUrl(null);
       console.log('Recording started');
+      // Start timer
+      setRecordingTime(0); // Reset timer
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingTime(prevTime => prevTime + 1);
+      }, 1000);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Could not access microphone. Please check permissions.');
       // TODO: Add user feedback for permission errors
+      setIsRecording(false); // Ensure state is correct if start fails
     }
-  };
+  }, []); // Close useCallback and provide dependency array
+// Removed extra closing braces from previous incorrect structure
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       console.log('Recording stopped');
+      // Stop timer
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
     }
   };
 
@@ -156,6 +182,23 @@ export default function CreateNotePage() {
     }
   }, [audioUrl]); // Re-run effect if audioUrl changes
 
+  // Effect to auto-start recording on mount
+  useEffect(() => {
+    console.log("Attempting to auto-start recording...");
+    startRecording(); // Call startRecording when component mounts
+
+    // Cleanup function to stop recording if component unmounts while recording
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        stopRecording();
+      }
+      // Clear timer interval on unmount
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [startRecording]); // Include startRecording in dependency array (due to useCallback)
+
   const handleProcessNote = async () => {
     setIsProcessing(true);
     setProcessError(''); // Clear previous errors
@@ -171,6 +214,7 @@ export default function CreateNotePage() {
 
     const formData = new FormData();
     formData.append('manualText', manualText);
+    formData.append('noteTitle', noteTitle); // Send the title
 
     if (audioBlob) {
       // Use a filename that the backend can recognize if needed, e.g., 'audio.webm'
@@ -189,8 +233,19 @@ export default function CreateNotePage() {
     console.log('Sending data to /api/notes/process...');
 
     try {
+      // Get the session token to send for server-side auth
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Could not get user session for authentication.');
+      }
+      const accessToken = session.access_token;
+
       const response = await fetch('/api/notes/process', {
         method: 'POST',
+        headers: {
+          // Send the token in the Authorization header
+          'Authorization': `Bearer ${accessToken}`,
+        },
         body: formData, // Send FormData directly
         // No 'Content-Type' header needed for FormData; browser sets it with boundary
       });
@@ -222,18 +277,44 @@ export default function CreateNotePage() {
     <DashboardLayout pageTitle="Create New Note">
       <div className="create-note-container"> {/* Use a specific container class */}
 
+        {/* Title Section - Reusing note page structure */}
+        <div className="note-header"> {/* Use same outer container */}
+          <div className="note-title-container"> {/* Use same title container */}
+            {/* Input field styled similarly to the h2/input on note page */}
+            <input
+              type="text"
+              value={noteTitle}
+              onChange={(e) => setNoteTitle(e.target.value)}
+              className="note-title-input header2 create-page-title-input" /* Apply header2 class */
+              placeholder="Enter Note Title"
+            />
+            {/* No edit/save buttons needed here as it's part of the main form */}
+          </div>
+          {/* No actions menu needed on create page */}
+        </div>
+        {/* Add a small spacer if needed */}
+        <div style={{ height: '20px' }}></div>
+        {/* Duplicated lines removed */}
+
         {/* Recording Section */}
         <div className="recording-section card"> {/* Use card style */}
           <h3 className="header3">Record Audio</h3>
           <div className="recording-controls">
             <button
               onClick={handleRecord}
-              className={`record-button ${isRecording ? 'recording' : ''}`}
+              className={`record-button ${isRecording ? 'recording pulsing' : ''}`}
               title={isRecording ? 'Stop Recording' : 'Start Recording'}
             >
               <MicrophoneIcon />
               <span>{isRecording ? 'Stop' : 'Record'}</span>
             </button>
+            {/* Display Elapsed Time */}
+            {isRecording && (
+              <span className="recording-timer">
+                {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:
+                {(recordingTime % 60).toString().padStart(2, '0')}
+              </span>
+            )}
             {/* Audio Playback Controls - Conditionally render based on audioUrl */}
             {audioUrl && (
               <div className="audio-controls">
@@ -283,6 +364,15 @@ export default function CreateNotePage() {
               {/* Hidden file inputs triggered by buttons */}
               <input type="file" id="fileInput" style={{ display: 'none' }} onChange={handleAddFile} multiple />
               <input type="file" id="photoInput" accept="image/*" style={{ display: 'none' }} onChange={handleAddPhoto} multiple />
+              {/* Hidden input for camera capture */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment" // Use "user" for front camera
+                style={{ display: 'none' }}
+                onChange={handlePhotoCaptured}
+              />
 
               <button className="standard-button button-secondary" title="Add File" onClick={() => document.getElementById('fileInput').click()}>
                 <FileIcon />
@@ -348,7 +438,7 @@ export default function CreateNotePage() {
           <button
             className="standard-button button-primary"
             onClick={handleProcessNote}
-            disabled={isProcessing} // Disable button while processing
+            disabled={isProcessing || isRecording} // Disable button while processing OR recording
           >
             {isProcessing ? 'Processing...' : 'Process Note'}
           </button>

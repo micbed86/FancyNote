@@ -32,70 +32,29 @@ export default function AccountPage() {
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   // Add state for AI and Storage settings if they need to be fetched/saved
   const [aiSettings, setAiSettings] = useState({ apiKey: '', model: 'google/gemma-3-27b-it:free', systemPrompt: '' });
-  // Renamed state to reflect FTP and added fields
-  const [ftpSettings, setFtpSettings] = useState({
-    host: '',
-    port: 21, // Default FTP port
-    user: '',
-    password: '', // Only used for testing, not saved directly
-    remote_path: '',
-    use_passive: true // Default to passive mode
-  });
-  const [ftpTestMessage, setFtpTestMessage] = useState({ type: '', text: '' });
-  const [testingFtp, setTestingFtp] = useState(false);
+  // FTP State Removed
   const [projectCredits, setProjectCredits] = useState(null); // State for project credits
 
-  // First useEffect: Check authentication and set user state
   useEffect(() => {
     const checkUser = async () => {
-      setLoading(true); // Ensure loading is true initially
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser(); // Rename to avoid conflict
-        if (!authUser) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
           router.push('/auth');
-          return; // Exit early if no user
+          return;
         }
-        setUser(authUser); // Set the user state
-        // Don't set loading false here; wait for profile data in the next effect
-      } catch (error) {
-        console.error('Error fetching user:', error);
-        setUser(null); // Ensure user is null on error
-        setLoading(false); // Stop loading on auth error
-      }
-    };
-    checkUser();
-  }, [router]);
 
-  // Second useEffect: Fetch profile data *after* user state is confirmed
-  useEffect(() => {
-    if (!user) {
-      // If user becomes null after initial check (e.g., token expires), stop loading
-      if (!loading) setLoading(false);
-      return; // Don't proceed if user is null
-    }
-
-    const fetchProfileData = async () => {
-      try {
-        const { data: profile, error: profileError } = await supabase
+        setUser(user);
+        
+        // Get user profile data
+        const { data: profile } = await supabase
           .from('profiles')
+          // Select ftp_settings JSONB column
           .select('*, project_credits, ftp_settings, ai_settings')
-          .eq('id', user.id) // Safe to use user.id here
+          .eq('id', user.id)
           .single();
 
-        if (profileError) {
-          // Handle profile fetch error specifically (e.g., profile not found is okay)
-          if (profileError.code !== 'PGRST116') { // PGRST116 = 'Fetched result contains 0 rows'
-             throw profileError;
-          }
-           console.warn('User profile not found, initializing defaults.');
-           // Initialize with defaults if profile doesn't exist
-           setFormData({ firstName: '', lastName: '' });
-           setEmailData({ email: user.email || '' });
-           setProjectCredits(0);
-           setAiSettings({ apiKey: '', model: 'google/gemma-3-27b-it:free', systemPrompt: '' });
-           setFtpSettings({ host: '', port: 21, user: '', password: '', remote_path: '', use_passive: true });
-        } else if (profile) {
-          // Profile found, set state from profile data
+        if (profile) {
           setFormData({
             firstName: profile.first_name || '',
             lastName: profile.last_name || '',
@@ -103,32 +62,36 @@ export default function AccountPage() {
           setEmailData({
             email: user.email || ''
           });
+          // TODO: Fetch AI and Storage settings from profile metadata or separate table
           setAiSettings({
             apiKey: profile.openrouter_api_key || '',
             model: profile.llm_model || 'google/gemma-3-27b-it:free',
             systemPrompt: profile.ai_system_prompt || ''
           });
-          const fetchedFtpSettings = profile.ftp_settings || {};
-          setFtpSettings({
-            host: fetchedFtpSettings.host || '',
-            port: fetchedFtpSettings.port || 21,
-            user: fetchedFtpSettings.user || '',
-            password: '', // Always clear password
-            remote_path: fetchedFtpSettings.remote_path || '',
-            use_passive: fetchedFtpSettings.use_passive !== undefined ? fetchedFtpSettings.use_passive : true
+          // FTP State Population Removed
+          setProjectCredits(profile.project_credits ?? 0); // Set project credits state
+
+        } else {
+          setFormData({
+            firstName: '',
+            lastName: '',
           });
-          setProjectCredits(profile.project_credits ?? 0);
+          setEmailData({
+            email: user.email || ''
+          });
+          // If profile doesn't exist yet, assume 0 credits initially
+          setProjectCredits(0);
         }
+
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching profile data:', error);
-        // Optionally set an error state to display to the user
-      } finally {
-        setLoading(false); // Set loading false after profile fetch attempt
+        console.error('Error fetching user:', error);
+        setLoading(false);
       }
     };
-
-    fetchProfileData();
-  }, [user]); // Dependency array ensures this runs when user state changes
+    
+    checkUser();
+  }, [router]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -147,11 +110,6 @@ export default function AccountPage() {
   };
 
   const handleNameBlur = async (e) => {
-    // Add explicit check for user state before accessing user.id
-    if (!user) {
-      console.warn('handleNameBlur called before user state was set.');
-      return; // Exit if user state is not yet available
-    }
     const { name, value } = e.target;
     if (formData[name] !== value) return; // No change
     
@@ -324,112 +282,36 @@ export default function AccountPage() {
     setAiSettings(prev => ({ ...prev, [id]: value }));
   };
 
-  // Updated handler for FTP settings, including checkbox
-  const handleFtpSettingsChange = (e) => {
-    const { id, value, type, checked } = e.target;
-    setFtpSettings(prev => ({
-      ...prev,
-      [id]: type === 'checkbox' ? checked : value
-    }));
-  };
+  // FTP Handlers Removed (handleFtpSettingsChange, saveFtpSettings, testFtpConnection)
 
-  // TODO: Implement functions to save AI and Storage settings
+  // TODO: Implement functions to save AI settings
   const saveAiSettings = async () => {
     setUpdating(true);
     setMessage({ type: '', text: '' });
     console.log('Saving AI Settings:', aiSettings);
-    // Removed commented-out Supabase call to eliminate potential obscure errors
-    alert('Saving AI settings not implemented yet.');
-    setUpdating(false);
-  };
-
-  // Updated function to save FTP settings via new API route
-  const saveFtpSettings = async () => {
-    setUpdating(true);
-    setMessage({ type: '', text: '' }); // Clear general message
-    setFtpTestMessage({ type: '', text: '' }); // Clear FTP test message
-
-    // Prepare data to save (exclude password)
-    const settingsToSave = {
-      host: ftpSettings.host,
-      port: parseInt(ftpSettings.port, 10) || 21, // Ensure port is integer
-      user: ftpSettings.user,
-      remote_path: ftpSettings.remote_path,
-      use_passive: ftpSettings.use_passive
-    };
-
-    console.log('Saving FTP Settings:', settingsToSave);
-
+    // Example Supabase update (adjust table/column names)
+    /*
     try {
-      const response = await fetch('/api/settings/update-ftp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`, // Add Authorization header
-        },
-        body: JSON.stringify(settingsToSave),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || `HTTP error! status: ${response.status}`);
-      }
-
-      setMessage({ type: 'success', text: 'FTP settings saved successfully!' });
-      // Clear password field after successful save for security
-      setFtpSettings(prev => ({ ...prev, password: '' }));
-
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          openrouter_api_key: aiSettings.apiKey,
+          llm_model: aiSettings.model,
+          ai_system_prompt: aiSettings.systemPrompt,
+          updated_at: new Date()
+        })
+        .eq('id', user.id);
+      if (error) throw error;
+      setMessage({ type: 'success', text: 'AI settings saved!' });
     } catch (error) {
-      console.error('Error saving FTP settings:', error);
-      setMessage({ type: 'error', text: `Failed to save FTP settings: ${error.message}` });
+      setMessage({ type: 'error', text: 'Failed to save AI settings.' });
+      console.error('Error saving AI settings:', error);
     } finally {
       setUpdating(false);
     }
-  };
-
-  // Function to test FTP connection using the dedicated API route
-  const testFtpConnection = async () => {
-    setTestingFtp(true);
-    setFtpTestMessage({ type: '', text: '' }); // Clear previous message
-    setMessage({ type: '', text: '' }); // Clear general message
-
-    // Use current form values for testing, including the password
-    const settingsToTest = {
-        host: ftpSettings.host,
-        port: parseInt(ftpSettings.port, 10) || 21,
-        user: ftpSettings.user,
-        password: ftpSettings.password, // Send password for testing
-        remote_path: ftpSettings.remote_path,
-        use_passive: ftpSettings.use_passive
-    };
-
-    console.log('Testing FTP Connection with:', settingsToTest);
-
-    try {
-        const response = await fetch('/api/settings/test-ftp', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionToken}`, // Add Authorization header
-            },
-            body: JSON.stringify(settingsToTest),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.error || `HTTP error! status: ${response.status}`);
-        }
-
-        setFtpTestMessage({ type: 'success', text: result.message || 'Connection successful!' });
-
-    } catch (error) {
-        console.error('Error testing FTP connection:', error);
-        setFtpTestMessage({ type: 'error', text: `Connection test failed: ${error.message}` });
-    } finally {
-        setTestingFtp(false);
-    }
+    */
+    alert('Saving AI settings not implemented yet.');
+    setUpdating(false);
   };
 
   // handleCreditsUpdate might need adjustment if BillingCard modifies projectCredits directly
@@ -461,7 +343,7 @@ export default function AccountPage() {
           <div className="tabs">
             <div className={`tab ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>Profile & Billing</div>
             <div className={`tab ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')}>AI (LLM)</div>
-            <div className={`tab ${activeTab === 'storage' ? 'active' : ''}`} onClick={() => setActiveTab('storage')}>Storage (FTP)</div>
+            {/* FTP Tab Removed */}
             <div className={`tab ${activeTab === 'security' ? 'active' : ''}`} onClick={() => setActiveTab('security')}>Security</div>
           </div>
         </div>
@@ -494,8 +376,8 @@ export default function AccountPage() {
 
         <div className={`tab-content ${activeTab === 'ai' ? 'active' : ''}`}>
           <h2 className="section-title">AI (LLM) Settings</h2>
-          {/* Reinstating AI form content */}
           {message.text && <div className={`message ${message.type}`}>{message.text}</div>}
+          {/* AI Settings Form - Adapted from .context/Settings Tab - AI (LLM) Content.md */}
           <form className="account-form" onSubmit={(e) => { e.preventDefault(); saveAiSettings(); }}>
              <div className="form-group">
                 <label htmlFor="apiKey">Openrouter API Key</label>
@@ -522,52 +404,7 @@ export default function AccountPage() {
           </form>
         </div>
 
-        <div className={`tab-content ${activeTab === 'storage' ? 'active' : ''}`}>
-          <h2 className="section-title">Storage (FTP) Settings</h2>
-          {/* Reinstating Storage form content */}
-          {message.text && <div className={`message ${message.type}`}>{message.text}</div>}
-          {ftpTestMessage.text && <div className={`message ${ftpTestMessage.type}`}>{ftpTestMessage.text}</div>}
-          <form className="account-form" onSubmit={(e) => { e.preventDefault(); saveFtpSettings(); }}>
-            <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
-                <div className="form-group" style={{ flex: 1 }}>
-                    <label htmlFor="host">FTP Host</label>
-                    <input type="text" id="host" className="account-input" placeholder="ftp.yourserver.com" aria-label="FTP Host" value={ftpSettings.host} onChange={handleFtpSettingsChange} required />
-                </div>
-                 <div className="form-group" style={{ flex: '0 0 100px' }}>
-                    <label htmlFor="port">Port</label>
-                    <input type="number" id="port" className="account-input" placeholder="21" aria-label="FTP Port" value={ftpSettings.port} onChange={handleFtpSettingsChange} required />
-                </div>
-                 <div className="form-group checkbox-group" style={{ flex: '0 0 150px', paddingBottom: '10px' }}>
-                     <label className="checkbox-wrapper">
-                         <input type="checkbox" id="use_passive" checked={ftpSettings.use_passive} onChange={handleFtpSettingsChange} />
-                         <span className="checkmark"></span> Use Passive Mode
-                     </label>
-                 </div>
-            </div>
-             <div className="form-group">
-                <label htmlFor="user">FTP Username</label>
-                <input type="text" id="user" className="account-input" placeholder="username" aria-label="FTP Username" value={ftpSettings.user} onChange={handleFtpSettingsChange} required />
-            </div>
-             <div className="form-group">
-                <label htmlFor="password">FTP Password</label>
-                <input type="password" id="password" className="account-input" placeholder="Enter password to test or save" aria-label="FTP Password" value={ftpSettings.password} onChange={handleFtpSettingsChange} required />
-                <p className="input-help">Password is required to test connection and save settings, but it is **not stored** in the database after saving.</p>
-            </div>
-             <div className="form-group">
-                <label htmlFor="remote_path">Remote Path (Optional)</label>
-                <input type="text" id="remote_path" className="account-input" placeholder="/mindpen_data/your_user_id/" aria-label="Remote FTP Path" value={ftpSettings.remote_path} onChange={handleFtpSettingsChange} />
-                 <p className="input-help">Base directory on the FTP server for storing notes. If blank, defaults to `/mindpen_data/your_user_id/` (where your_user_id is your actual user ID).</p>
-            </div>
-            <div className="form-actions" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button type="button" className="account-btn button-secondary" onClick={testFtpConnection} disabled={updating || testingFtp}>
-                  {testingFtp ? 'Testing...' : 'Test Connection'}
-                </button>
-                <button type="submit" className="account-btn button-primary" disabled={updating || testingFtp}>
-                  {updating ? 'Saving...' : 'Save FTP Settings'}
-                </button>
-            </div>
-          </form>
-        </div>
+        {/* FTP Tab Content Removed */}
 
         <div className={`tab-content ${activeTab === 'security' ? 'active' : ''}`}>
           {/* Email Section */}

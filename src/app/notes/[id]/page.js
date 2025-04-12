@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, use } from 'react'; // Import use
+import { useState, useEffect, use, useCallback } from 'react'; // Import use, useCallback
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../../components/DashboardLayout';
-import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon } from '@/lib/icons'; // Added more icons
+import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon
 import './note.css'; // Renamed CSS file
 
 export default function NotePage({ params }) { // Renamed component
@@ -14,13 +14,20 @@ export default function NotePage({ params }) { // Renamed component
   const { id: noteId } = unwrappedParams; // Renamed variable
 
   const [loading, setLoading] = useState(true);
-  const [noteTitle, setNoteTitle] = useState('Loading...'); // Renamed state
+  const [noteTitle, setNoteTitle] = useState('Loading...');
+  const [noteText, setNoteText] = useState(''); // State for text content
+  const [noteFiles, setNoteFiles] = useState([]); // State for file attachments
+  const [noteImages, setNoteImages] = useState([]); // State for image attachments
+  const [noteVoice, setNoteVoice] = useState([]); // State for voice recordings
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showMenu, setShowMenu] = useState(false); // State for delete menu
   const [error, setError] = useState(null);
+  const [authToken, setAuthToken] = useState(null); // State to hold auth token for URLs
+  // TODO: Add state for editable content if implementing WYSIWYG
 
   useEffect(() => {
-    const checkUserAndFetchNote = async () => { // Renamed function
+    // Define the async function directly inside useEffect
+    const checkUserAndFetchNote = async () => {
       setLoading(true);
       setError(null);
 
@@ -30,6 +37,10 @@ export default function NotePage({ params }) { // Renamed component
         router.push('/auth');
         return;
       }
+      // Store the token for use in attachment URLs
+      const { data: { session } } = await supabase.auth.getSession();
+      setAuthToken(session?.access_token || null);
+      // Removed extra closing brace that broke the function scope
 
       if (!noteId) { // Use renamed variable
         console.error('Note ID is missing');
@@ -65,8 +76,11 @@ export default function NotePage({ params }) { // Renamed component
         }
 
         if (noteData) {
-          setNoteTitle(noteData.title || 'Untitled Note'); // Use renamed state and default
-          // TODO: Set state for content, attachments, images based on noteData
+          setNoteTitle(noteData.title || 'Untitled Note');
+          setNoteText(noteData.text || ''); // Set text content
+          setNoteFiles(noteData.files || []); // Set file attachments
+          setNoteImages(noteData.images || []); // Set image attachments
+          setNoteVoice(noteData.voice || []); // Set voice recordings
         } else if (!fetchError) {
            setError('Note not found.');
         }
@@ -77,10 +91,11 @@ export default function NotePage({ params }) { // Renamed component
       } finally {
         setLoading(false);
       }
-    };
+    }; // End of checkUserAndFetchNote async function
 
-    checkUserAndFetchNote();
-  }, [noteId, router]); // Use renamed variable
+    checkUserAndFetchNote(); // Call the function
+
+  }, [noteId, router]); // useEffect dependency array remains the same
 
   // --- Title Editing Handlers ---
   const handleTitleEdit = () => {
@@ -150,6 +165,84 @@ export default function NotePage({ params }) { // Renamed component
   };
   // --- End Delete Menu Handlers ---
 
+  // --- Attachment Deletion Handler ---
+  const handleDeleteAttachment = async (type, index) => {
+    // type: 'files', 'images', or 'voice'
+    // index: index within the corresponding state array
+
+    let itemToDelete;
+    let currentItems;
+    let setItems;
+
+    if (type === 'files') {
+      currentItems = noteFiles;
+      setItems = setNoteFiles;
+    } else if (type === 'images') {
+      currentItems = noteImages;
+      setItems = setNoteImages;
+    } else if (type === 'voice') {
+      currentItems = noteVoice;
+      setItems = setNoteVoice;
+    } else {
+      console.error("Invalid attachment type for deletion");
+      return;
+    }
+
+    itemToDelete = currentItems[index];
+    if (!itemToDelete || !itemToDelete.path) {
+        console.error("Could not find item to delete or item path missing");
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to delete the attachment "${itemToDelete.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    console.log(`Attempting to delete ${type} attachment:`, itemToDelete);
+
+    try {
+      // Get auth token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Could not get user session for authentication.');
+      }
+      const accessToken = session.access_token;
+
+      const response = await fetch('/api/notes/delete-attachment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          noteId: noteId, // noteId is available from page params
+          attachmentType: type,
+          attachmentPath: itemToDelete.path
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || `HTTP error! status: ${response.status}`);
+      }
+
+      console.log('Attachment deleted successfully via API:', result.message);
+
+      // Update UI state after successful deletion
+      const updatedItems = currentItems.filter((_, i) => i !== index);
+      setItems(updatedItems);
+      // Optionally show a success message to the user
+
+    } catch (error) {
+      console.error(`Error deleting attachment ${itemToDelete.name}:`, error);
+      alert(`Failed to delete attachment: ${error.message}`);
+      // Optionally revert UI state if needed
+    }
+
+  };
+  // --- End Attachment Deletion Handler ---
+
 
   if (loading) {
     return (
@@ -191,7 +284,7 @@ export default function NotePage({ params }) { // Renamed component
                 className="note-title-input" /* Renamed class */
                 autoFocus
               />
-            ) : (
+            )   : (
               <h2 className="header2"> {/* Use h2 with header2 style */}
                 {noteTitle}
                 <button onClick={handleTitleEdit} className="edit-title-button" title="Edit Title" style={{ marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -230,19 +323,37 @@ export default function NotePage({ params }) { // Renamed component
         <div className="note-content-area">
           {/* WYSIWYG Editor Placeholder */}
           {/* TODO: Integrate a WYSIWYG library (e.g., TipTap, Quill, Slate) */}
-          <div className="wysiwyg-editor" contentEditable="true" suppressContentEditableWarning={true}>
-            <p>This is where the editable note content will appear...</p>
-            {/* Example of embedded image (replace with dynamic data) */}
-            {/* <img src="https://placehold.co/600x300/2d2d2d/f0f0f0?text=Embedded+Image" alt="Embedded Image"> */}
+          {/* TODO: Replace with actual WYSIWYG editor integration */}
+          <div className="wysiwyg-editor" style={{ border: '1px solid #ccc', minHeight: '150px', padding: '10px' }}>
+             {/* Display fetched text content (simple paragraph for now) */}
+             <p>{noteText || 'No text content.'}</p>
           </div>
 
           {/* Embedded Images Section */}
           {/* TODO: Fetch and map embedded images */}
-          <details className="embedded-images-section" open> {/* 'open' makes it expanded by default */}
-            <summary>Embedded Images (0)</summary> {/* TODO: Update count dynamically */}
-            <div className="image-thumbnail-grid">
-              {/* Placeholder for image thumbnails */}
+          {/* Conditionally render based on length, default open if > 0 */}
+          <details className="embedded-images-section" open={noteImages.length > 0}>
+            <summary>Embedded Images ({noteImages.length})</summary>
+            {noteImages.length > 0 && (
+              <div className="image-thumbnail-grid">
+                {/* TODO: Implement actual image rendering using SFTP paths & Lightbox */}
+                {noteImages.map((img, index) => (
+                  // Correct structure: one item per map iteration
+                  <div key={index} className="thumbnail-item attachment-item"> {/* Added attachment-item for styling consistency */}
+                     <div className="attachment-info" onClick={() => alert(`Lightbox for ${img.name} (path: ${img.path}) - Not implemented`)} style={{ cursor: 'pointer' }}> {/* Wrap info for click */}
+                       <ImageIcon /> <span>{img.name}</span>
+                     </div>
+                     <button
+                       onClick={() => handleDeleteAttachment('images', index)}
+                       className="control-button delete-button attachment-delete-btn"
+                       title="Remove Image"
+                     >
+                       <TrashIcon />
+                     </button>
+                  </div>
+                ))}
             </div>
+            )} {/* Close the conditional rendering block */}
           </details>
 
           {/* Attachments Section */}
@@ -258,24 +369,53 @@ export default function NotePage({ params }) { // Renamed component
               </div>
             </div>
             <ul className="attachment-list">
-              {/* Placeholder for attachment list items */}
-               <li className="attachment-item"> {/* Example Item */}
-                 <div className="attachment-info">
-                   <FileIcon />
-                   <span>example_attachment.txt</span>
-                 </div>
-                 <label className="checkbox-wrapper" title="Include in AI context">
-                   <input type="checkbox" />
-                   <div className="checkmark">
-                     <svg stroke="currentColor" fill="none" viewBox="0 0 24 24"><path strokeLinejoin="round" strokeLinecap="round" strokeWidth="3" d="M20 6L9 17L4 12"></path></svg>
+              {noteFiles.length === 0 && <li className="no-attachments">No file attachments.</li>}
+              {noteFiles.map((file, index) => (
+                 <li key={index} className="attachment-item">
+                   <div className="attachment-info">
+                     <FileIcon />
+                     {/* TODO: Create actual download link/handler */}
+                     <a href="#" onClick={(e) => { e.preventDefault(); alert(`Open/Download ${file.name} (path: ${file.path}) - Not implemented`); }} title={file.path} target="_blank" rel="noopener noreferrer">
+                       {file.name}
+                     </a>
                    </div>
-                 </label>
-                 <button className="attachment-delete-btn" title="Remove Attachment">
-                   <TrashIcon />
-                 </button>
-               </li>
+                   <button
+                     onClick={() => handleDeleteAttachment('files', index)}
+                     className="control-button delete-button attachment-delete-btn"
+                     title="Remove Attachment"
+                   >
+                     <TrashIcon />
+                   </button>
+                 </li>
+              ))}
             </ul>
           </div>
+
+          {/* Voice Recordings Section */}
+          {noteVoice.length > 0 && (
+            <div className="voice-recordings-section">
+              <h3 className="header3">Voice Recordings</h3>
+              <ul className="attachment-list">
+                {noteVoice.map((voice, index) => (
+                  <li key={index} className="attachment-item voice-item">
+                    <div className="attachment-info">
+                      <MicrophoneIcon />
+                      <span>{voice.name}</span>
+                      {/* TODO: Implement audio player using SFTP path */}
+                      <button onClick={() => alert(`Play ${voice.name} (path: ${voice.path}) - Not implemented`)}><PlayIcon /></button>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteAttachment('voice', index)}
+                      className="control-button delete-button attachment-delete-btn"
+                      title="Remove Recording"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Bottom Action Buttons */}
           {/* TODO: Add functionality (Save, Share, Re-process) */}

@@ -1,105 +1,74 @@
 import { NextResponse } from 'next/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js'; // Import standard client for service role
 import { cookies } from 'next/headers';
-import { Client } from 'basic-ftp';
 import { v4 as uuidv4 } from 'uuid'; // For generating unique filenames
+import path, { posix as posixPath } from 'path'; // Import posix version for SFTP paths
+import { sftpService } from '@/lib/sftp-service'; // Import our SFTP service
 
-// Helper function to connect and ensure directories exist
-async function connectAndPrepareFtp(ftpConfig, userId) {
-  const client = new Client();
-  // client.ftp.verbose = true; // Enable for debugging
+export const dynamic = 'force-dynamic'; // Force dynamic execution for auth
 
-  try {
-    if (!ftpConfig || !ftpConfig.host || !ftpConfig.user || !ftpConfig.password) {
-      throw new Error('Incomplete FTP configuration in profile.');
-    }
-
-    await client.access({
-      host: ftpConfig.host,
-      user: ftpConfig.user,
-      password: ftpConfig.password,
-      port: ftpConfig.port || 21,
-      secure: false, // Plain FTP
-    });
-    console.log(`FTP connected for user ${userId}`);
-
-    // Determine base path
-    let basePath = ftpConfig.remote_path || `/mindpen_data/${userId}`;
-    // Ensure base path ends with a slash
-    if (!basePath.endsWith('/')) {
-        basePath += '/';
-    }
-
-    console.log(`Ensuring base path: ${basePath}`);
-    await client.ensureDir(basePath); // Create base path if it doesn't exist
-
-    // Ensure subdirectories exist
-    const subDirs = ['files', 'images', 'voice'];
-    for (const dir of subDirs) {
-      const fullDirPath = basePath + dir;
-      console.log(`Ensuring sub directory: ${fullDirPath}`);
-      await client.ensureDir(fullDirPath);
-    }
-
-    console.log('FTP directories prepared.');
-    return { client, basePath }; // Return connected client and base path
-
-  } catch (error) {
-    console.error(`FTP connection or directory preparation failed for user ${userId}:`, error);
-    // Close client if connection was partially successful but failed later
-    if (!client.closed) {
-      await client.close();
-    }
-    throw new Error(`FTP Error: ${error.message}`); // Re-throw for the main handler
-  }
-}
+// Old FTP helper function removed
 
 
 export async function POST(request) {
-  const supabase = createServerComponentClient({ cookies });
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Initialize Supabase client using SERVICE ROLE for database operations
+  // This bypasses RLS policies after we've already authenticated the user via token.
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } } // No need to persist session for service role
+  );
+  // --- DEBUG: Check if service key is loaded ---
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("FATAL: SUPABASE_SERVICE_ROLE_KEY environment variable is missing!");
+    // Optionally return an error here, but logging might be enough for debug
+  } else {
+    console.log("Service role key seems loaded (length check)."); // Don't log the key itself!
   }
-  const userId = session.user.id;
+  // --- END DEBUG ---
+  // Keep the route handler client specifically for token validation if needed elsewhere,
+  // but we'll use supabaseAdmin for the insert.
+  const supabaseAuth = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY); // Use anon key for auth helper
 
-  let ftpClient; // To hold the FTP client instance for cleanup
+  // --- Token Authentication ---
+  const authHeader = request.headers.get('Authorization');
+  const token = authHeader?.split('Bearer ')[1];
+
+  if (!token) {
+    console.log('No auth token provided');
+    return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
+  }
+
+  // Validate token using the auth client instance
+  const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+
+  if (userError || !user) {
+    console.error('Token validation error:', userError);
+    return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+  }
+  const userId = user.id; // Get user ID from token validation
+  console.log(`Authenticated user ${userId} via token.`);
+  // --- End Token Authentication ---
+
+  let sftpClient; // To hold the SFTP client instance for cleanup
 
   try {
-    // 1. Fetch User's FTP Settings
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('ftp_settings')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !profile || !profile.ftp_settings) {
-      console.error('Error fetching profile or FTP settings:', profileError);
-      return NextResponse.json({ error: 'FTP settings not configured or profile not found.' }, { status: 400 });
+    // 1. SFTP Base Path Configuration
+    const sftpBasePath = process.env.SFTP_BASE_PATH;
+    if (!sftpBasePath) {
+        console.error('SFTP_BASE_PATH environment variable is not set.');
+        return NextResponse.json({ error: 'Server SFTP configuration error.' }, { status: 500 });
     }
+    // Note: User-specific directory creation is handled by the upload function
 
-    // TODO: Need a way to get the FTP password securely.
-    // For now, assuming it might be temporarily passed or needs another mechanism.
-    // THIS IS A PLACEHOLDER AND INSECURE if password isn't handled properly.
-    // Maybe the password needs to be fetched from a secure store or re-entered?
-    // Let's assume for now it's part of ftp_settings for the sake of structure,
-    // but highlight this is a major security gap to be addressed.
-    const ftpConfig = profile.ftp_settings;
-    if (!ftpConfig.password) {
-        // In a real app, you'd likely prompt the user or use a secure vault.
-        // Forcing a password check here.
-         return NextResponse.json({ error: 'FTP password missing in configuration for processing.' }, { status: 400 });
-    }
-
-
-    // 2. Connect to FTP and Prepare Directories
-    const { client, basePath } = await connectAndPrepareFtp(ftpConfig, userId);
-    ftpClient = client; // Assign to outer scope for finally block
+    // 2. Connect to SFTP
+    // SFTP connection uses key from env vars, no need to fetch profile settings here for connection
+    sftpClient = await sftpService.connect(); // Assign to outer scope for finally block
 
     // 3. Parse FormData
     const formData = await request.formData();
     const manualText = formData.get('manualText') || '';
+    const noteTitle = formData.get('noteTitle') || 'New Note'; // Get title from form, default if missing
     const audioBlob = formData.get('audioBlob'); // Assuming blob is sent with this key
     const attachments = formData.getAll('attachments'); // Assuming files are sent with this key
     const attachmentContextFlags = JSON.parse(formData.get('attachmentContextFlags') || '[]'); // Need to send context flags
@@ -111,21 +80,24 @@ export async function POST(request) {
 
 
     // 4. Process and Upload Files/Audio
-    const uploadedFiles = { files: [], images: [], voice: [] };
+    const uploadedFilePaths = { files: [], images: [], voice: [] }; // Store relative paths
 
     // Upload Audio
     if (audioBlob && audioBlob.size > 0) {
-        const uniqueAudioName = `${uuidv4()}.webm`; // Assuming webm format
-        const remoteAudioPath = `${basePath}voice/${uniqueAudioName}`;
-        const audioBuffer = Buffer.from(await audioBlob.arrayBuffer()); // Convert blob to buffer
+        const uniqueAudioName = `${uuidv4()}.webm`; // Or determine actual format if possible
+        const relativeAudioPath = posixPath.join(userId, 'voice', uniqueAudioName); // Use posix.join for forward slashes
+        // Ensure sftpBasePath is defined before joining
+        if (!sftpBasePath) throw new Error("SFTP Base Path not configured");
+        const remoteAudioPath = posixPath.join(sftpBasePath, relativeAudioPath); // Use posix.join for forward slashes
+        const audioBuffer = Buffer.from(await audioBlob.arrayBuffer());
 
-        console.log(`Uploading audio to: ${remoteAudioPath}`);
-        await ftpClient.uploadFrom(audioBuffer, remoteAudioPath);
-        console.log('Audio uploaded successfully.');
+        console.log(`Uploading audio via SFTP to: ${remoteAudioPath}`);
+        // sftpService handles directory creation
+        await sftpService.uploadFile(sftpClient, audioBuffer, remoteAudioPath);
+        console.log('SFTP Audio uploaded successfully.');
 
-        // Construct URL (adjust protocol/format as needed)
-        const audioUrl = `ftp://${ftpConfig.host}${remoteAudioPath}`; // Simplistic URL construction
-        uploadedFiles.voice.push({ url: audioUrl, name: 'recording.webm', size: audioBlob.size }); // Add duration later?
+        // Store relative path and metadata
+        uploadedFilePaths.voice.push({ path: relativeAudioPath, name: 'recording.webm', size: audioBlob.size });
     }
 
     // Upload Attachments
@@ -134,34 +106,41 @@ export async function POST(request) {
         const includeInContext = attachmentContextFlags[i] !== undefined ? attachmentContextFlags[i] : true; // Default to true if flag missing
 
         if (file && file.size > 0) {
-            const uniqueFileName = `${uuidv4()}_${file.name}`;
+            // Sanitize file.name? Basic sanitization: remove path characters
+            const safeFileName = file.name.replace(/[/\\]/g, '_');
+            const uniqueFileName = `${uuidv4()}_${safeFileName}`;
             const fileBuffer = Buffer.from(await file.arrayBuffer());
             let targetDir = 'files';
-            let urlList = uploadedFiles.files;
+            let pathList = uploadedFilePaths.files;
 
             if (file.type.startsWith('image/')) {
                 targetDir = 'images';
-                urlList = uploadedFiles.images;
+                pathList = uploadedFilePaths.images;
             }
             // Add more checks? e.g., audio types to voice?
 
-            const remoteFilePath = `${basePath}${targetDir}/${uniqueFileName}`;
-            console.log(`Uploading ${targetDir} file to: ${remoteFilePath}`);
-            await ftpClient.uploadFrom(fileBuffer, remoteFilePath);
-            console.log('File uploaded successfully.');
+            const relativeFilePath = posixPath.join(userId, targetDir, uniqueFileName); // Use posix.join for forward slashes
+            // Ensure sftpBasePath is defined before joining
+            if (!sftpBasePath) throw new Error("SFTP Base Path not configured");
+            const remoteFilePath = posixPath.join(sftpBasePath, relativeFilePath); // Use posix.join for forward slashes
 
-            const fileUrl = `ftp://${ftpConfig.host}${remoteFilePath}`;
-            urlList.push({ url: fileUrl, name: file.name, size: file.size, includeInContext });
+            console.log(`Uploading ${targetDir} file via SFTP to: ${remoteFilePath}`);
+            await sftpService.uploadFile(sftpClient, fileBuffer, remoteFilePath);
+            console.log('SFTP File uploaded successfully.');
+
+            pathList.push({ path: relativeFilePath, name: file.name, size: file.size, includeInContext });
         }
     }
 
     // 5. Prepare Note Data for Supabase
     const noteData = {
       user_id: userId,
-      text: manualText,
-      files: uploadedFiles.files,
-      images: uploadedFiles.images,
-      voice: uploadedFiles.voice,
+      title: noteTitle, // Use title from form data
+      text: manualText, // Keep text content
+      // Store the relative paths and metadata
+      files: uploadedFilePaths.files,
+      images: uploadedFilePaths.images,
+      voice: uploadedFilePaths.voice,
       // transcripts: '', // To be added later
       // title: '', // To be added later or generated
       // summary: '', // To be added later
@@ -170,7 +149,8 @@ export async function POST(request) {
 
     // 6. Save Note to Supabase
     console.log('Saving note data to Supabase:', noteData);
-    const { data: newNote, error: insertError } = await supabase
+    // Use the ADMIN client (service role) to perform the insert, bypassing RLS check
+    const { data: newNote, error: insertError } = await supabaseAdmin
       .from('notes')
       .insert(noteData)
       .select('id') // Select the ID of the newly created note
@@ -190,10 +170,9 @@ export async function POST(request) {
     console.error('Error processing note:', error);
     return NextResponse.json({ error: error.message || 'An unexpected error occurred during note processing.' }, { status: 500 });
   } finally {
-    // Ensure FTP client is closed
-    if (ftpClient && !ftpClient.closed) {
-      console.log('Closing FTP connection in finally block.');
-      await ftpClient.close();
+    // Ensure SFTP client is closed
+    if (sftpClient) {
+      await sftpService.disconnect(sftpClient);
     }
   }
 }
