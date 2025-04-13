@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, use, useCallback, useRef } from 'react'; // Import use, useCallback, useRef
-// import SimpleReactLightbox, { SRLWrapper } from 'simple-react-lightbox'; // Removed lightbox import
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../../components/DashboardLayout';
@@ -429,7 +428,6 @@ export default function NotePage({ params }) { // Renamed component
 
   return (
     <DashboardLayout pageTitle={isEditingTitle ? 'Editing Note...' : noteTitle}>
-      {/* <SimpleReactLightbox> */} {/* Removed Lightbox Provider */}
       <div className="dashboard-content item-detail-content">
         {/* Apply structure from titleUI.md */}
         {/* Structure based on titleUI.md and previous implementation */}
