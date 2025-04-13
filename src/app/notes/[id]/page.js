@@ -152,21 +152,57 @@ export default function NotePage({ params }) { // Renamed component
     setShowMenu(!showMenu);
   };
 
-  const handleDeleteNote = async () => { // Renamed function
+  const handleDeleteNote = async () => {
+    console.log("[handleDeleteNote] Function called."); // Log 1: Function start
     setShowMenu(false); // Close menu
-    if (confirm('Are you sure you want to delete this note? This action cannot be undone.')) { // Updated confirmation text
+    if (confirm('Are you sure you want to delete this note and all its associated files? This action cannot be undone.')) {
+      console.log("[handleDeleteNote] Confirmation received."); // Log 2: Confirmation
       try {
-        const { error: deleteError } = await supabase
-          .from('notes') // Use 'notes' table
-          .delete()
-          .eq('id', noteId); // Use renamed variable
+        // Get auth token
+        console.log("[handleDeleteNote] Attempting to get session..."); // Log 3: Before session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          console.error("[handleDeleteNote] Error getting session:", sessionError);
+          throw new Error('Could not get user session for authentication.');
+        }
+        const accessToken = session.access_token;
+        console.log("[handleDeleteNote] Session and token obtained."); // Log 4: After session
 
-        if (deleteError) throw deleteError;
+        const apiUrl = '/api/notes/delete-note-and-files';
+        const requestBody = { noteId: noteId };
+        const requestOptions = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(requestBody),
+        };
+        console.log(`[handleDeleteNote] Calling API: ${apiUrl}`, requestOptions); // Log 5: Before fetch
+        const response = await fetch(apiUrl, requestOptions);
+        console.log(`[handleDeleteNote] API response received. Status: ${response.status}, OK: ${response.ok}`); // Log 6: After fetch
 
-        router.push('/notes'); // Use renamed route
+        const result = await response.json();
+        console.log("[handleDeleteNote] API response JSON parsed:", result); // Log 7: After JSON parse
+
+        if (!response.ok) {
+          // Include SFTP errors in the alert if they exist
+          const errorMessage = result.error || `HTTP error! status: ${response.status}`;
+          const sftpErrors = result.sftpErrors ? `\nSFTP Issues:\n- ${result.sftpErrors.join('\n- ')}` : '';
+          throw new Error(`${errorMessage}${sftpErrors}`);
+        }
+
+        console.log('Note and files deleted successfully via API:', result.message);
+        if (result.sftpErrors) {
+            console.warn('SFTP issues encountered during deletion:', result.sftpErrors);
+            // Optionally inform the user about non-fatal SFTP issues here
+            alert(`Note deleted, but some files might not have been removed from storage. Please check manually if needed. Issues:\n- ${result.sftpErrors.join('\n- ')}`);
+        }
+
+        router.push('/notes'); // Redirect after successful deletion
 
       } catch (error) {
-        console.error('Error deleting note:', error);
+        console.error('[handleDeleteNote] Error caught:', error); // Log 8: Catch block
         alert(`Failed to delete note: ${error.message}`);
       }
     }
