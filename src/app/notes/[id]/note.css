@@ -221,6 +221,27 @@
   align-items: center; 
 }
 
+.textarea.note-text-edit {
+    /* Assuming .textarea style is global or defined elsewhere */
+    min-height: 150px; /* Adjust height as needed */
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 16px;
+    color: white;
+    background: rgba(20, 20, 20, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.3s ease;
+    resize: vertical;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .textarea.note-text-edit:focus {
+    border-color: #8a2be2;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+  }
+
 /* --- Embedded Images Section --- */
 .embedded-images-section summary {
   list-style: none; /* Remove default marker */

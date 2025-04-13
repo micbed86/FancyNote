@@ -5,7 +5,7 @@ import { useState, useEffect, use, useCallback, useRef } from 'react'; // Import
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../../components/DashboardLayout';
-import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon, CheckIcon } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon, CheckIcon
+import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon, CheckCircle } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon, Changed CheckIcon to CheckCircle
 import './note.css'; // Renamed CSS file
 
 export default function NotePage({ params }) { // Renamed component
@@ -285,8 +285,9 @@ export default function NotePage({ params }) { // Renamed component
   // --- Text Editing Handlers ---
   const handleTextEditToggle = () => {
     if (isEditingText) {
-      // If toggling off, revert changes if needed (or just stop editing)
-      setEditedText(noteText); // Revert to original text when cancelling edit
+      // If toggling off (clicking "Done"), just change the state.
+      // The edited text remains in `editedText` state for the Save button.
+      // setEditedText(noteText); // REMOVED: This line incorrectly reverted changes.
     } else {
       // If toggling on, ensure editedText has the current noteText
       setEditedText(noteText);
@@ -493,7 +494,7 @@ export default function NotePage({ params }) { // Renamed component
                 className={`standard-button button-secondary edit-text-button ${isEditingText ? 'editing' : ''}`}
                 title={isEditingText ? 'Finish Editing Text' : 'Edit Text'}
               >
-                {isEditingText ? <CheckIcon /> : <EditIcon />}
+                {isEditingText ? <CheckCircle /> : <EditIcon />}
                 {isEditingText ? 'Done' : 'Edit'}
               </button>
             </div>
@@ -507,7 +508,7 @@ export default function NotePage({ params }) { // Renamed component
               />
             ) : (
               <div className="note-text-display" style={{ whiteSpace: 'pre-wrap', padding: '10px', border: '1px solid transparent' }}> {/* Added basic display styling */}
-                {noteText || <span style={{ color: '#888' }}>No text content.</span>} {/* Placeholder if empty */}
+                {editedText || <span style={{ color: '#888' }}>No text content.</span>} {/* Display editedText instead of noteText */}
               </div>
             )}
           </div>
