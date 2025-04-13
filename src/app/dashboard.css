@@ -6,7 +6,7 @@
 }
 
 .dashboard-container {
-  display: flex;
+  display: flex; flex-direction: column;
   min-height: 100vh;
   background: linear-gradient(135deg, #121212 0%, #2d2d2d 100%);
   color: #f0f0f0;
