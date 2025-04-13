@@ -575,7 +575,6 @@ export default function NotePage({ params }) { // Renamed component
                           )}
                           {/* Keep the name display and delete button outside the <a> tag */}
                           <div className="attachment-info-footer">
-                            <span>{img.name}</span>
                             <button
                               onClick={() => handleDeleteAttachment('images', index)}
                               className="control-button delete-button attachment-delete-btn"

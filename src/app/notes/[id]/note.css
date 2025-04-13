@@ -433,7 +433,6 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-left: 10px; /* Space before delete button */
 }
 .attachment-delete-btn:hover {
   color: #ff4d4d;
