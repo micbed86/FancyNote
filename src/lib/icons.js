@@ -29,17 +29,22 @@ export const HomeIcon = (props) => (
       viewBox="0 0 24 24" 
       fill="none" 
       stroke="currentColor" 
-      strokeWidth="1.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className="lucide lucide-git-merge" 
+      strokeWidth="2"  // Zmieniono z stroke-width
+      strokeLinecap="round" // Zmieniono z stroke-linecap
+      strokeLinejoin="round" // Zmieniono z stroke-linejoin
+      className="lucide lucide-notepad-text-icon lucide-notepad-text" // Zmieniono z class
       {...props}
     >
-      <circle cx="18" cy="18" r="3"/>
-      <circle cx="6" cy="6" r="3"/>
-      <path d="M6 21V9a9 9 0 0 0 9 9"/>
+      <path d="M8 2v4"/>
+      <path d="M12 2v4"/>
+      <path d="M16 2v4"/>
+      <rect width="16" height="18" x="4" y="4" rx="2"/>
+      <path d="M8 10h6"/>
+      <path d="M8 14h8"/>
+      <path d="M8 18h5"/>
     </svg>
   )
+  
   
   export const AccountIcon = (props) => (
     <svg 

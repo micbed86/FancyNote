@@ -529,7 +529,7 @@ export default function NotePage({ params }) { // Renamed component
           {/* TODO: Fetch and map embedded images */}
           {/* Conditionally render based on length, default open if > 0 */}
           <details className="embedded-images-section" open={noteImages.length > 0}>
-            <summary>Embedded Images ({noteImages.length})</summary>
+            <summary>Images ({noteImages.length})</summary>
             {noteImages.length > 0 ? ( // Changed from && to ternary operator
               <>
                 <div className="image-thumbnail-grid"> {/* Grid starts here */}

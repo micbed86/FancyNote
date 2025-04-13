@@ -34,7 +34,7 @@ export default function AuthPage() {
         setMessage(error.message);
       } else {
         setMessage('Login successful! Letting you in...');
-        router.push('/dashboard');
+        router.push('/notes');
       }
     } else {
       if (password !== confirmPassword) {

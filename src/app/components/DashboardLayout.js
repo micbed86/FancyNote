@@ -72,12 +72,6 @@ export default function DashboardLayout({ children, pageTitle = 'Dashboard' }) {
         <nav className="sidebar-nav">
           <ul>
             <li>
-              <Link href="/dashboard" className={pageTitle === 'Dashboard' ? 'active' : ''}>
-                <HomeIcon />
-                <span className="nav-text">Dashboard</span>
-              </Link>
-            </li>
-            <li>
               <Link href="/notes" className={pageTitle === 'Notes' ? 'active' : ''}>
                 <ProjectIcon /> {/* Keep ProjectIcon, it's generic */}
                 <span className="nav-text">Notes</span>
