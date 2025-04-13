@@ -247,49 +247,86 @@
   padding-left: 20px; /* Indent thumbnails */
 }
 
-.thumbnail-item {
-  position: relative;
-  width: 80px;
-  height: 80px;
-}
-
-.thumbnail-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 6px;
-  display: block;
+/* Combined thumbnail and attachment item styles */
+.thumbnail-item.attachment-item {
+  position: relative; /* Needed for absolute positioning of delete button */
+  padding: 5px; /* Add some padding */
+  background: rgba(255, 255, 255, 0.05); /* Match other attachments */
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex; flex-direction: column; /* Use flex */
+  align-items: center; /* Align items vertically */
+  gap: 10px;
+  width: auto; /* Let content determine width initially */
+  min-width: 100px; /* Ensure some minimum width */
+  height: auto; /* Let content determine height */
 }
 
+/* Container for the image itself */
+.thumbnail-image-container {
+  width: auto; /* Allow width to adjust based on aspect ratio */
+  height: 80px; /* Explicit height */
+  min-width: 80px; /* Ensure it's at least square if aspect ratio is wide */
+  max-width: 150px; /* Limit width */
+  flex-shrink: 0;
+  background-color: #222;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative; /* Needed if we want absolute positioning inside */
+}
+
+.thumbnail-placeholder svg { /* Style placeholder icon */
+   width: 30px;
+   height: 30px;
+   color: #888;
+}
+
+/* Renamed class */
+.thumbnail-image {
+  width: 100%; /* Fill container width */
+  height: 100%; /* Fill container height */
+  object-fit: cover; /* Cover the container */
+  display: block; /* Make image block level */
+  /* Ensure image respects container bounds */
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Adjust delete button positioning for flex layout */
 .thumbnail-delete-btn {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: rgba(255, 107, 107, 0.8); /* Danger color background */
+  /* position: absolute; */ /* Remove absolute positioning */
+  /* top: -5px; */
+  /* right: -5px; */
+  background: rgba(255, 107, 107, 0.8);
   color: white;
   border: none;
   border-radius: 50%;
   width: 20px;
   height: 20px;
   font-size: 12px;
-  line-height: 20px; /* Center icon vertically */
+  /* line-height: 20px; */ /* Let flex align */
   text-align: center;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0; /* Keep hover effect */
   transition: opacity 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  margin-left: auto; /* Push to the right */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 .thumbnail-delete-btn svg { /* Style icon inside button */
   width: 10px;
   height: 10px;
 }
 
-.thumbnail-item:hover .thumbnail-delete-btn {
+/* Apply hover to the container */
+.thumbnail-item.attachment-item:hover .thumbnail-delete-btn {
   opacity: 1;
 }
 
@@ -365,7 +402,7 @@
   color: #ff6b6b; /* Danger color */
   cursor: pointer;
   padding: 5px;
-  display: flex;
+  display: flex; justify-content: center;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;

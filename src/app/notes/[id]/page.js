@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, use, useCallback } from 'react'; // Import use, useCallback
+// import SimpleReactLightbox, { SRLWrapper } from 'simple-react-lightbox'; // Removed lightbox import
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../../components/DashboardLayout';
@@ -39,7 +40,9 @@ export default function NotePage({ params }) { // Renamed component
       }
       // Store the token for use in attachment URLs
       const { data: { session } } = await supabase.auth.getSession();
-      setAuthToken(session?.access_token || null);
+      const token = session?.access_token || null;
+      setAuthToken(token);
+      console.log("Auth Token Set:", token ? 'Token available' : 'Token MISSING'); // Log token status
       // Removed extra closing brace that broke the function scope
 
       if (!noteId) { // Use renamed variable
@@ -266,8 +269,8 @@ export default function NotePage({ params }) { // Renamed component
   }
 
   return (
-    // Pass the potentially edited title to the layout
     <DashboardLayout pageTitle={isEditingTitle ? 'Editing Note...' : noteTitle}>
+      {/* <SimpleReactLightbox> */} {/* Removed Lightbox Provider */}
       <div className="dashboard-content item-detail-content">
         {/* Apply structure from titleUI.md */}
         {/* Structure based on titleUI.md and previous implementation */}
@@ -334,26 +337,44 @@ export default function NotePage({ params }) { // Renamed component
           {/* Conditionally render based on length, default open if > 0 */}
           <details className="embedded-images-section" open={noteImages.length > 0}>
             <summary>Embedded Images ({noteImages.length})</summary>
-            {noteImages.length > 0 && (
-              <div className="image-thumbnail-grid">
-                {/* TODO: Implement actual image rendering using SFTP paths & Lightbox */}
-                {noteImages.map((img, index) => (
-                  // Correct structure: one item per map iteration
-                  <div key={index} className="thumbnail-item attachment-item"> {/* Added attachment-item for styling consistency */}
-                     <div className="attachment-info" onClick={() => alert(`Lightbox for ${img.name} (path: ${img.path}) - Not implemented`)} style={{ cursor: 'pointer' }}> {/* Wrap info for click */}
-                       <ImageIcon /> <span>{img.name}</span>
-                     </div>
-                     <button
-                       onClick={() => handleDeleteAttachment('images', index)}
-                       className="control-button delete-button attachment-delete-btn"
-                       title="Remove Image"
-                     >
-                       <TrashIcon />
-                     </button>
-                  </div>
-                ))}
-            </div>
-            )} {/* Close the conditional rendering block */}
+            {noteImages.length > 0 ? ( // Changed from && to ternary operator
+              <>
+                <div className="image-thumbnail-grid"> {/* Grid starts here */}
+                  {noteImages.map((img, index) => {
+                      // Construct URL only if token and path exist
+                      const imageUrl = authToken && img.path ? `/api/notes/attachment/${img.path}?token=${authToken}` : null;
+                      console.log(`Rendering image component for: ${img.name}`); // Add log here
+                      return (
+                        <div key={index} className="thumbnail-item attachment-item">
+                          {/* Wrap thumbnail in an <a> tag for the lightbox */}
+                          {imageUrl ? (
+                            // Removed data-attribute="SRL" and made link open in new tab for now
+                            <a href={imageUrl} target="_blank" rel="noopener noreferrer">
+                              <img src={imageUrl} alt={img.name} className="thumbnail-image" />
+                            </a>
+                          ) : (
+                            <div className="attachment-info"> {/* Fallback for missing image */}
+                              <ImageIcon />
+                              <span>{img.name} (No URL)</span>
+                            </div>
+                          )}
+                          {/* Keep the name display and delete button outside the <a> tag */}
+                          <div className="attachment-info-footer">
+                            <span>{img.name}</span>
+                            <button
+                              onClick={() => handleDeleteAttachment('images', index)}
+                              className="control-button delete-button attachment-delete-btn"
+                              title="Remove Image"
+                            >
+                              <TrashIcon />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div> {/* Grid ends here */}
+              </>
+            ) : null} {/* Explicitly render null if condition is false */}
           </details>
 
           {/* Attachments Section */}
@@ -374,8 +395,15 @@ export default function NotePage({ params }) { // Renamed component
                  <li key={index} className="attachment-item">
                    <div className="attachment-info">
                      <FileIcon />
-                     {/* TODO: Create actual download link/handler */}
-                     <a href="#" onClick={(e) => { e.preventDefault(); alert(`Open/Download ${file.name} (path: ${file.path}) - Not implemented`); }} title={file.path} target="_blank" rel="noopener noreferrer">
+                     {/* Construct download URL */}
+                     <a
+                       href={authToken && file.path ? `/api/notes/attachment/${file.path}?token=${authToken}` : '#'}
+                       title={file.path}
+                       target="_blank" // Open in new tab
+                       rel="noopener noreferrer"
+                       className={!(authToken && file.path) ? 'disabled-link' : ''} // Add class if disabled
+                       // download={file.name} // Optional: Suggest filename for download
+                     >
                        {file.name}
                      </a>
                    </div>
@@ -398,11 +426,18 @@ export default function NotePage({ params }) { // Renamed component
               <ul className="attachment-list">
                 {noteVoice.map((voice, index) => (
                   <li key={index} className="attachment-item voice-item">
-                    <div className="attachment-info">
+                    <div className="attachment-info voice-info"> {/* Added class */}
                       <MicrophoneIcon />
                       <span>{voice.name}</span>
-                      {/* TODO: Implement audio player using SFTP path */}
-                      <button onClick={() => alert(`Play ${voice.name} (path: ${voice.path}) - Not implemented`)}><PlayIcon /></button>
+                      {/* Basic HTML5 audio player */}
+                      {authToken && voice.path ? (
+                        <audio controls preload="none" className="voice-player"> {/* Added class */}
+                          <source src={`/api/notes/attachment/${voice.path}?token=${authToken}`} type="audio/webm" /> {/* Adjust type if needed */}
+                          Your browser does not support the audio element.
+                        </audio>
+                      ) : (
+                        <button disabled><PlayIcon /></button> // Disabled placeholder
+                      )}
                     </div>
                     <button
                       onClick={() => handleDeleteAttachment('voice', index)}
@@ -426,6 +461,7 @@ export default function NotePage({ params }) { // Renamed component
           </div> {/* End of note-actions */}
         </div> {/* End of note-content-area */}
       </div> {/* End of dashboard-content */}
+      {/* </SimpleReactLightbox> */} {/* Removed Lightbox Provider */}
     </DashboardLayout>
   );
 }

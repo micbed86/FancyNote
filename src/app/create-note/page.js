@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'; // Added useCa
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
-import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, PlayIcon, PauseIcon, StopIcon, TrashIcon } from '@/lib/icons'; // Import necessary icons
+import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon } from '@/lib/icons'; // Import necessary icons + EditIcon (Removed Play, Pause, Stop)
 import './create-note.css'; // Link to the CSS file we will create
 
 export default function CreateNotePage() {
@@ -12,18 +12,23 @@ export default function CreateNotePage() {
   const [manualText, setManualText] = useState('');
   const [noteTitle, setNoteTitle] = useState('New Note'); // Add state for title
   const [attachments, setAttachments] = useState([]); // Store { file: File, includeInContext: boolean } objects
+  const [voiceRecordings, setVoiceRecordings] = useState([]); // Store completed { blob: Blob, url: string, name: string }
   const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState(null); // Store recorded audio Blob
-  const [audioUrl, setAudioUrl] = useState(null); // Store URL for playback
+  const [audioBlob, setAudioBlob] = useState(null); // Store *current* recorded audio Blob
+  const [audioUrl, setAudioUrl] = useState(null); // Store URL for *current* playback
+  const [isEditingTitle, setIsEditingTitle] = useState(false); // State for title editing
   const [isPlaying, setIsPlaying] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const streamRef = useRef(null); // Ref to store the media stream
   const audioPlayerRef = useRef(null); // Ref for the <audio> element
   const timerIntervalRef = useRef(null); // Ref for the recording timer interval
   const [recordingTime, setRecordingTime] = useState(0); // State for recording duration in seconds
   const [isProcessing, setIsProcessing] = useState(false); // State for processing status
   const [processError, setProcessError] = useState(''); // State for processing errors
   const cameraInputRef = useRef(null); // Ref for the hidden camera input
+  const initialStartDoneRef = useRef(false); // Ref to track initial auto-start
+
   const handleAddFile = (event) => {
     const newFiles = Array.from(event.target.files);
     // Optional: Add checks for file size, type, or duplicate names
@@ -58,10 +63,21 @@ export default function CreateNotePage() {
 
   // Use useCallback to memoize startRecording if needed, though dependencies are minimal here
   const startRecording = useCallback(async () => {
+    // --- Move previous recording (if exists) to the list ---
+    if (audioBlob && audioUrl) {
+      const recordingName = `Recording ${voiceRecordings.length + 1}.webm`; // Simple naming
+      setVoiceRecordings(prev => [...prev, { blob: audioBlob, url: audioUrl, name: recordingName }]);
+      setAudioBlob(null); // Clear current blob/url after saving
+      setAudioUrl(null);
+      // Note: URL revocation for the moved audio happens when it's deleted from the list or on unmount
+    }
+    // --- End move previous recording ---
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream; // Store the stream
       mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current = []; // Reset chunks
+      audioChunksRef.current = []; // Reset chunks for new recording
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -75,13 +91,13 @@ export default function CreateNotePage() {
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
         // Clean up stream tracks
-        stream.getTracks().forEach(track => track.stop());
-      };
+        // Stream tracks will be stopped in the cleanup effect or when stopRecording explicitly stops them
+      }; // Note: Removed track stopping from here
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
-      setAudioBlob(null); // Clear previous recording
-      setAudioUrl(null);
+      // setAudioBlob(null); // Already cleared if previous existed
+      // setAudioUrl(null);
       console.log('Recording started');
       // Start timer
       setRecordingTime(0); // Reset timer
@@ -94,8 +110,8 @@ export default function CreateNotePage() {
       // TODO: Add user feedback for permission errors
       setIsRecording(false); // Ensure state is correct if start fails
     }
-  }, []); // Close useCallback and provide dependency array
-// Removed extra closing braces from previous incorrect structure
+  }, [audioBlob, audioUrl, voiceRecordings.length]); // Restore audioBlob/Url dependencies
+  // The function needs the latest blob/url to correctly move the previous recording.
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -103,6 +119,11 @@ export default function CreateNotePage() {
       setIsRecording(false);
       console.log('Recording stopped');
       // Stop timer
+      // Explicitly stop tracks here as well for immediate feedback
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null; // Clear the ref
+      }
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
     }
@@ -116,37 +137,28 @@ export default function CreateNotePage() {
     }
   };
 
-  const playAudio = () => {
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.play();
-      setIsPlaying(true);
-    }
-  };
 
-  const pauseAudio = () => {
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  // Stop playback and reset time
-  const stopAudio = () => {
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-      audioPlayerRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  };
-
-  const deleteAudio = () => {
+  // Deletes the *currently* displayed audio (before it's added to the list)
+  const deleteCurrentAudio = () => {
     setAudioBlob(null);
     setAudioUrl(null);
     setIsPlaying(false); // Ensure playback stops if deleted while playing
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl); // Clean up object URL
+      console.log("Revoked current audio URL:", audioUrl);
     }
-    console.log('Audio deleted');
+    console.log('Current audio deleted');
+  };
+
+  // Deletes a recording from the voiceRecordings list
+  const deleteVoiceRecording = (indexToDelete) => {
+    const recordingToDelete = voiceRecordings[indexToDelete];
+    if (recordingToDelete && recordingToDelete.url) {
+      URL.revokeObjectURL(recordingToDelete.url); // Clean up object URL
+      console.log("Revoked saved audio URL:", recordingToDelete.url);
+    }
+    setVoiceRecordings(prev => prev.filter((_, index) => index !== indexToDelete));
+    console.log('Saved voice recording deleted');
   };
 
   // NOTE: These functions were already added in the previous step, but included here
@@ -161,43 +173,86 @@ export default function CreateNotePage() {
     ));
   };
 
-  // Effect to handle audio player events
+  // Effect to clean up audio URL on unmount or change
   useEffect(() => {
-    const audio = audioPlayerRef.current;
-    if (audio) {
-      const handleEnded = () => setIsPlaying(false);
-      const handlePause = () => setIsPlaying(false); // Also set playing to false on manual pause
+    // Clean up Object URL when component unmounts or audioUrl changes
+    // Clean up Object URL for the *current* audioUrl when component unmounts or it changes
+    return () => {
+      if (audioUrl) {
+         URL.revokeObjectURL(audioUrl);
+         console.log("Revoked current audio URL on cleanup:", audioUrl);
+      }
+    };
+  }, [audioUrl]);
 
-      audio.addEventListener('ended', handleEnded);
-      audio.addEventListener('pause', handlePause);
-
-      return () => {
-        audio.removeEventListener('ended', handleEnded);
-        audio.removeEventListener('pause', handlePause);
-        // Clean up Object URL when component unmounts or audioUrl changes
-        if (audioUrl) {
-           URL.revokeObjectURL(audioUrl);
+  // Effect to clean up all saved voice recording URLs on unmount
+  useEffect(() => {
+    return () => {
+      console.log("Cleaning up saved voice recording URLs on unmount...");
+      voiceRecordings.forEach(rec => {
+        if (rec.url) {
+          URL.revokeObjectURL(rec.url);
+          console.log("Revoked saved audio URL:", rec.url);
         }
-      };
-    }
-  }, [audioUrl]); // Re-run effect if audioUrl changes
+      });
+    };
+  }, [voiceRecordings]); // Dependency on the array itself
 
-  // Effect to auto-start recording on mount
+  // Effect to auto-start recording ONLY on initial mount
   useEffect(() => {
-    console.log("Attempting to auto-start recording...");
-    startRecording(); // Call startRecording when component mounts
+    if (!initialStartDoneRef.current) {
+      console.log("Attempting initial auto-start recording...");
+      startRecording(); // Call startRecording only on the first mount
+      initialStartDoneRef.current = true; // Mark initial start as done
+    }
 
-    // Cleanup function to stop recording if component unmounts while recording
+    // Cleanup function remains the same: stop recording if component unmounts while recording
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        stopRecording();
+        console.log("Stopping recording via unmount cleanup...");
+        stopRecording(); // This will now also stop tracks via the modified stopRecording
+      } else if (streamRef.current) {
+        // If not recording but stream still exists (e.g., stopped manually before unmount)
+        console.log("Cleaning up leftover stream via unmount cleanup...");
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+        console.log("Cleaned up stream tracks on unmount.");
       }
       // Clear timer interval on unmount
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
-    };
-  }, [startRecording]); // Include startRecording in dependency array (due to useCallback)
+    }; // End of useEffect cleanup function
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  // --- Title Editing Handlers (Adapted from Note Page) ---
+  const handleTitleEdit = () => {
+    setIsEditingTitle(true);
+  };
+
+  const handleTitleSave = () => {
+    setIsEditingTitle(false);
+    const trimmedTitle = noteTitle.trim();
+    if (!trimmedTitle) {
+        setNoteTitle('New Note'); // Reset if empty
+    }
+    // No backend update needed here, just finalize state
+  };
+
+  const handleTitleChange = (e) => {
+    setNoteTitle(e.target.value);
+  };
+
+  const handleTitleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      // Optionally revert title state if needed, for now just exit edit mode
+      setIsEditingTitle(false);
+      // To revert, you might need to store the original title temporarily
+    }
+  };
+  // --- End Title Editing Handlers ---
 
   const handleProcessNote = async () => {
     setIsProcessing(true);
@@ -212,21 +267,41 @@ export default function CreateNotePage() {
 
     // TODO: Implement credit check before proceeding
 
+    // --- Finalize recordings before sending ---
+    let finalVoiceRecordings = [...voiceRecordings];
+    if (audioBlob && audioUrl) {
+      // If there's a current recording that wasn't moved yet (user didn't start another)
+      const recordingName = `Recording ${finalVoiceRecordings.length + 1}.webm`;
+      finalVoiceRecordings.push({ blob: audioBlob, url: audioUrl, name: recordingName });
+      // Clear the current audio state as it's now part of the list to be sent
+      setAudioBlob(null);
+      setAudioUrl(null); // URL will be revoked by cleanup effect later
+    }
+    // --- End finalize recordings ---
+
     const formData = new FormData();
     formData.append('manualText', manualText);
     formData.append('noteTitle', noteTitle); // Send the title
 
-    if (audioBlob) {
-      // Use a filename that the backend can recognize if needed, e.g., 'audio.webm'
-      formData.append('audioBlob', audioBlob, 'audio.webm');
-    }
+    // Append voice recordings
+    finalVoiceRecordings.forEach((recording, index) => {
+      // Use a consistent naming convention the backend can parse
+      formData.append(`voiceRecording_${index}`, recording.blob, recording.name);
+    });
 
-    // Append attachment files and their context flags
+    // Append other attachments (files/images)
+    // if (audioBlob) { // This is now handled by finalVoiceRecordings
+      // Use a filename that the backend can recognize if needed, e.g., 'audio.webm'
+      // formData.append('audioBlob', audioBlob, 'audio.webm'); // This is now handled by voiceRecording_n
+    // } // Removed extra closing brace
+
     const attachmentContextFlags = [];
     attachments.forEach((item, index) => {
-      formData.append('attachments', item.file); // Append the File object
+      // Use a different key for general attachments vs voice recordings
+      formData.append(`attachment_${index}`, item.file); // Append the File object
       attachmentContextFlags.push(item.includeInContext);
     });
+    // Send context flags separately if needed, or combine logic on backend
     formData.append('attachmentContextFlags', JSON.stringify(attachmentContextFlags));
 
 
@@ -277,24 +352,27 @@ export default function CreateNotePage() {
     <DashboardLayout pageTitle="Create New Note">
       <div className="create-note-container"> {/* Use a specific container class */}
 
-        {/* Title Section - Reusing note page structure */}
-        <div className="note-header"> {/* Use same outer container */}
-          <div className="note-title-container"> {/* Use same title container */}
-            {/* Input field styled similarly to the h2/input on note page */}
+        {/* Title Section (Adapted from Note Page) */}
+        <div className="note-title-container create-note-title-container"> {/* Added specific class */}
+          {isEditingTitle ? (
             <input
               type="text"
               value={noteTitle}
-              onChange={(e) => setNoteTitle(e.target.value)}
-              className="note-title-input header2 create-page-title-input" /* Apply header2 class */
-              placeholder="Enter Note Title"
+              onChange={handleTitleChange}
+              onBlur={handleTitleSave} // Save on blur
+              onKeyDown={handleTitleKeyDown} // Save on Enter, cancel on Escape
+              className="note-title-input" // Reuse style? Or create specific one
+              autoFocus
             />
-            {/* No edit/save buttons needed here as it's part of the main form */}
-          </div>
-          {/* No actions menu needed on create page */}
+          ) : (
+            <h2 className="header2 create-note-header2" onClick={handleTitleEdit} title="Click to edit title"> {/* Make header clickable */}
+              {noteTitle}
+              <button onClick={(e) => { e.stopPropagation(); handleTitleEdit(); }} className="edit-title-button" title="Edit Title" style={{ marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                <EditIcon />
+              </button>
+            </h2>
+          )}
         </div>
-        {/* Add a small spacer if needed */}
-        <div style={{ height: '20px' }}></div>
-        {/* Duplicated lines removed */}
 
         {/* Recording Section */}
         <div className="recording-section card"> {/* Use card style */}
@@ -315,35 +393,55 @@ export default function CreateNotePage() {
                 {(recordingTime % 60).toString().padStart(2, '0')}
               </span>
             )}
-            {/* Audio Playback Controls - Conditionally render based on audioUrl */}
+            {/* Standard Audio Player - Conditionally render based on audioUrl */}
             {audioUrl && (
-              <div className="audio-controls">
-                 {/* Hidden audio player element */}
-                 <audio ref={audioPlayerRef} src={audioUrl} style={{ display: 'none' }} />
-                 {/* Play/Pause Button */}
-                 {!isPlaying ? (
-                   <button onClick={playAudio} className="control-button play-button" title="Play Recording">
-                     <PlayIcon />
-                   </button>
-                 ) : (
-                   <button onClick={pauseAudio} className="control-button pause-button" title="Pause Recording">
-                     <PauseIcon />
-                   </button>
-                 )}
-                 {/* Stop Button */}
-                 <button onClick={stopAudio} className="control-button stop-button" title="Stop Playback">
-                   <StopIcon />
-                 </button>
-                 {/* Delete Button */}
-                 <button onClick={deleteAudio} className="control-button delete-button" title="Delete Recording">
-                   <TrashIcon />
-                 </button>
+              <div className="audio-playback-controls"> {/* Wrapper div */}
+                <audio controls src={audioUrl} preload="metadata" className="standard-audio-player"> {/* Standard player */}
+                  Your browser does not support the audio element.
+                </audio>
+                {/* Delete Button for the *current* audio - Icon only */}
+                {/* Apply styles to make it look like the list delete buttons */}
+                <button
+                  onClick={deleteCurrentAudio}
+                  className="control-button delete-button attachment-delete-btn" // Keep classes for potential shared styles, but override specifics
+                  title="Delete Current Recording"
+                  style={{ background: 'none', border: 'none', padding: '0', marginLeft: '8px', cursor: 'pointer' }} // Inline styles to remove background/border and add spacing
+                >
+                  <TrashIcon />
+                </button>
               </div>
             )}
           </div>
           {/* TODO: Add visual feedback for recording duration? */}
-          {/* TODO: Add support for multiple recordings if needed */}
         </div>
+
+        {/* Saved Voice Recordings List */}
+        {voiceRecordings.length > 0 && (
+          <div className="voice-recordings-section card"> {/* Use card style */}
+            <h3 className="header3">Saved Recordings</h3>
+            <ul className="attachment-list voice-recordings-list"> {/* Reuse attachment list style */}
+              {voiceRecordings.map((rec, index) => (
+                <li key={index} className="attachment-item voice-item"> {/* Reuse item style */}
+                  <div className="attachment-info voice-info"> {/* Reuse info style */}
+                    <MicrophoneIcon />
+                    <span>{rec.name}</span>
+                    {/* Basic HTML5 audio player */}
+                    <audio controls src={rec.url} preload="metadata" className="voice-player">
+                      Your browser does not support the audio element.
+                    </audio>
+                  </div>
+                  <button
+                    onClick={() => deleteVoiceRecording(index)}
+                    className="control-button delete-button attachment-delete-btn" // Reuse delete button style
+                    title="Delete Saved Recording"
+                  >
+                    <TrashIcon />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Manual Text Input Section */}
         <div className="manual-text-section card"> {/* Use card style */}

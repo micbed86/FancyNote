@@ -67,7 +67,7 @@ export default function DashboardLayout({ children, pageTitle = 'Dashboard' }) {
               <CloseIcon />
             </button>
             <Image src="/logo_white.svg" alt="Logo" className="logo-img" width={100} height={100} />
-            <h2 className="sidebar-logo">SaaS Starter</h2>
+            <h2 className="sidebar-logo">FancyNote</h2>
         </div>
         <nav className="sidebar-nav">
           <ul>

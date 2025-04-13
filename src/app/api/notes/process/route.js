@@ -69,68 +69,69 @@ export async function POST(request) {
     const formData = await request.formData();
     const manualText = formData.get('manualText') || '';
     const noteTitle = formData.get('noteTitle') || 'New Note'; // Get title from form, default if missing
-    const audioBlob = formData.get('audioBlob'); // Assuming blob is sent with this key
-    const attachments = formData.getAll('attachments'); // Assuming files are sent with this key
-    const attachmentContextFlags = JSON.parse(formData.get('attachmentContextFlags') || '[]'); // Need to send context flags
+    // const audioBlob = formData.get('audioBlob'); // Removed: Now handling multiple voice recordings
+    // const attachments = formData.getAll('attachments'); // Removed: Now handling indexed attachments
+    const attachmentContextFlags = JSON.parse(formData.get('attachmentContextFlags') || '[]'); // Keep context flags
 
     console.log('Received manualText:', !!manualText);
-    console.log('Received audioBlob:', !!audioBlob);
-    console.log('Received attachments count:', attachments.length);
+    // console.log('Received audioBlob:', !!audioBlob); // Removed
+    // console.log('Received attachments count:', attachments.length); // Will log individually now
     console.log('Received context flags:', attachmentContextFlags);
 
 
     // 4. Process and Upload Files/Audio
     const uploadedFilePaths = { files: [], images: [], voice: [] }; // Store relative paths
 
-    // Upload Audio
-    if (audioBlob && audioBlob.size > 0) {
-        const uniqueAudioName = `${uuidv4()}.webm`; // Or determine actual format if possible
-        const relativeAudioPath = posixPath.join(userId, 'voice', uniqueAudioName); // Use posix.join for forward slashes
-        // Ensure sftpBasePath is defined before joining
+    // Upload Audio & Attachments by iterating through FormData
+    let attachmentIndex = 0; // To correlate with context flags if needed
+    for (const [key, value] of formData.entries()) {
+      // Check for Voice Recordings
+      if (key.startsWith('voiceRecording_') && value instanceof Blob && value.size > 0) {
+        const voiceBlob = value;
+        const originalName = voiceBlob.name || 'recording.webm'; // Use blob name if available
+        const uniqueVoiceName = `${uuidv4()}_${originalName}`;
+        const relativeVoicePath = posixPath.join(userId, 'voice', uniqueVoiceName);
         if (!sftpBasePath) throw new Error("SFTP Base Path not configured");
-        const remoteAudioPath = posixPath.join(sftpBasePath, relativeAudioPath); // Use posix.join for forward slashes
-        const audioBuffer = Buffer.from(await audioBlob.arrayBuffer());
+        const remoteVoicePath = posixPath.join(sftpBasePath, relativeVoicePath);
+        const voiceBuffer = Buffer.from(await voiceBlob.arrayBuffer());
 
-        console.log(`Uploading audio via SFTP to: ${remoteAudioPath}`);
-        // sftpService handles directory creation
-        await sftpService.uploadFile(sftpClient, audioBuffer, remoteAudioPath);
-        console.log('SFTP Audio uploaded successfully.');
+        console.log(`Uploading voice recording via SFTP to: ${remoteVoicePath}`);
+        await sftpService.uploadFile(sftpClient, voiceBuffer, remoteVoicePath);
+        console.log('SFTP Voice recording uploaded successfully.');
 
-        // Store relative path and metadata
-        uploadedFilePaths.voice.push({ path: relativeAudioPath, name: 'recording.webm', size: audioBlob.size });
-    }
+        uploadedFilePaths.voice.push({ path: relativeVoicePath, name: originalName, size: voiceBlob.size });
+      }
+      // Check for General Attachments (Files/Images)
+      else if (key.startsWith('attachment_') && value instanceof File && value.size > 0) {
+        const file = value;
+        // Determine context flag based on index (assuming order is preserved)
+        const includeInContext = attachmentContextFlags[attachmentIndex] !== undefined ? attachmentContextFlags[attachmentIndex] : true;
+        attachmentIndex++; // Increment index for the next attachment
 
-    // Upload Attachments
-    for (let i = 0; i < attachments.length; i++) {
-        const file = attachments[i];
-        const includeInContext = attachmentContextFlags[i] !== undefined ? attachmentContextFlags[i] : true; // Default to true if flag missing
+        const safeFileName = file.name.replace(/[/\\]/g, '_');
+        const uniqueFileName = `${uuidv4()}_${safeFileName}`;
+        const fileBuffer = Buffer.from(await file.arrayBuffer());
+        let targetDir = 'files';
+        let pathList = uploadedFilePaths.files;
 
-        if (file && file.size > 0) {
-            // Sanitize file.name? Basic sanitization: remove path characters
-            const safeFileName = file.name.replace(/[/\\]/g, '_');
-            const uniqueFileName = `${uuidv4()}_${safeFileName}`;
-            const fileBuffer = Buffer.from(await file.arrayBuffer());
-            let targetDir = 'files';
-            let pathList = uploadedFilePaths.files;
-
-            if (file.type.startsWith('image/')) {
-                targetDir = 'images';
-                pathList = uploadedFilePaths.images;
-            }
-            // Add more checks? e.g., audio types to voice?
-
-            const relativeFilePath = posixPath.join(userId, targetDir, uniqueFileName); // Use posix.join for forward slashes
-            // Ensure sftpBasePath is defined before joining
-            if (!sftpBasePath) throw new Error("SFTP Base Path not configured");
-            const remoteFilePath = posixPath.join(sftpBasePath, relativeFilePath); // Use posix.join for forward slashes
-
-            console.log(`Uploading ${targetDir} file via SFTP to: ${remoteFilePath}`);
-            await sftpService.uploadFile(sftpClient, fileBuffer, remoteFilePath);
-            console.log('SFTP File uploaded successfully.');
-
-            pathList.push({ path: relativeFilePath, name: file.name, size: file.size, includeInContext });
+        if (file.type.startsWith('image/')) {
+          targetDir = 'images';
+          pathList = uploadedFilePaths.images;
         }
+
+        const relativeFilePath = posixPath.join(userId, targetDir, uniqueFileName);
+        if (!sftpBasePath) throw new Error("SFTP Base Path not configured");
+        const remoteFilePath = posixPath.join(sftpBasePath, relativeFilePath);
+
+        console.log(`Uploading ${targetDir} file via SFTP to: ${remoteFilePath}`);
+        await sftpService.uploadFile(sftpClient, fileBuffer, remoteFilePath);
+        console.log('SFTP File uploaded successfully.');
+
+        pathList.push({ path: relativeFilePath, name: file.name, size: file.size, includeInContext });
+      }
     }
+
+    // --- End Combined Upload Loop ---
 
     // 5. Prepare Note Data for Supabase
     const noteData = {
