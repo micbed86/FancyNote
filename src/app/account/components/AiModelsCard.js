@@ -92,8 +92,13 @@ export default function AiModelsCard({ initialModelId, onModelSelect }) {
     <div className="ai-models-card">
       {/* Removed Title, Inputs, Save Button - Handled by Parent */}
 
-      {/* Title moved to parent, this component just shows the grid */}
-      {/* <h4 style={{ marginBottom: '15px', color: '#bbb', borderTop: '1px solid #444', paddingTop: '20px' }}>Select Model</h4> */}
+      {/* Display Currently Selected Model */}
+      {selectedModel && (
+        <h4 style={{ marginBottom: '15px', color: '#a0a0a0', fontSize: '1rem' }}>
+          Currently Selected: <span style={{ color: '#5fa8ff', fontWeight: 'bold' }}>{selectedModel.name}</span>
+        </h4>
+      )}
+      {/* Search Input */}
       <div className="search-container" style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
         <input
           type="text"
@@ -125,7 +130,11 @@ export default function AiModelsCard({ initialModelId, onModelSelect }) {
             <h4>{model.name}</h4>
             <div className="model-details">
               <p><strong>Context Length:</strong> {model.context_length.toLocaleString()} tokens</p>
-              <p><strong>Pricing:</strong> ${(model.pricing.input * 1000000).toFixed(2)} / ${(model.pricing.output * 1000000).toFixed(2)} per million tokens (Input/Output)</p>
+              <p><strong>Pricing:</strong> {
+                 (model.pricing && typeof model.pricing.input === 'number' && typeof model.pricing.output === 'number')
+                   ? `$${(model.pricing.input * 1000000).toFixed(2)} / $${(model.pricing.output * 1000000).toFixed(2)}`
+                   : 'N/A'
+              } per million tokens (Input/Output)</p>
             </div>
             {/* Styled button-like indicator */}
             {selectedModel?.id === model.id &&
