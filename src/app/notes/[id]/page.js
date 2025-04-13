@@ -200,7 +200,6 @@ export default function NotePage({ params }) { // Renamed component
         }
 
         router.push('/notes'); // Redirect after successful deletion
-        router.push('/notes'); // Redirect after successful deletion
 
       } catch (error) {
         console.error('[handleDeleteNote] Error caught:', error); // Log 8: Catch block
