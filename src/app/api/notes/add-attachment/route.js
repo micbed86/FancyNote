@@ -57,7 +57,8 @@ export async function POST(request) {
         if (!noteId) {
             return NextResponse.json({ error: 'Note ID is required.' }, { status: 400 });
         }
-        if (!(file instanceof File) || file.size === 0) {
+        // Check for both File and Blob instances to support different environments
+        if ((!file || !(file instanceof Blob) || file.size === 0)) {
              return NextResponse.json({ error: 'Valid attachment file is required.' }, { status: 400 });
         }
         console.log(`[API AddAttachment] Processing for note ID: ${noteId}, User ID: ${user.id}, File: ${file.name}`);
