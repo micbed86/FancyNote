@@ -269,7 +269,7 @@
 .image-thumbnail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 10px;
+  grid-gap: 25px;
   margin-top: 10px;
   padding-left: 20px; /* Indent thumbnails */
 }

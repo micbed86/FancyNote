@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use, useCallback, useRef } from 'react'; // Import use, useCallback, useRef
 import { useRouter } from 'next/navigation';
+import Image from 'next/image'; // Import Next.js Image component
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../../components/DashboardLayout';
 import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon, CheckCircle } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon, Changed CheckIcon to CheckCircle
@@ -543,7 +544,14 @@ export default function NotePage({ params }) { // Renamed component
                           {imageUrl ? (
                             // Removed data-attribute="SRL" and made link open in new tab for now
                             <a href={imageUrl} target="_blank" rel="noopener noreferrer">
-                              <img src={imageUrl} alt={img.name} className="thumbnail-image" />
+                              <Image 
+                                src={imageUrl} 
+                                alt={img.name} 
+                                className="thumbnail-image" 
+                                width={150} 
+                                height={150} 
+                                style={{ objectFit: 'cover' }} 
+                              />
                             </a>
                           ) : (
                             <div className="attachment-info"> {/* Fallback for missing image */}

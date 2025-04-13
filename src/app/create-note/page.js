@@ -223,7 +223,7 @@ export default function CreateNotePage() {
         clearInterval(timerIntervalRef.current);
       }
     }; // End of useEffect cleanup function
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, [startRecording]); // Added startRecording to dependency array to fix React Hook warning
 
   // --- Title Editing Handlers (Adapted from Note Page) ---
   const handleTitleEdit = () => {
