@@ -102,7 +102,7 @@ export async function POST(request) {
         uploadedFilePaths.voice.push({ path: relativeVoicePath, name: originalName, size: voiceBlob.size });
       }
       // Check for General Attachments (Files/Images)
-      else if (key.startsWith('attachment_') && value instanceof File && value.size > 0) {
+      else if (key.startsWith('attachment_') && value instanceof Blob && value.size > 0) {
         const file = value;
         // Determine context flag based on index (assuming order is preserved)
         const includeInContext = attachmentContextFlags[attachmentIndex] !== undefined ? attachmentContextFlags[attachmentIndex] : true;
