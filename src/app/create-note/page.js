@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'; // Added useCa
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
-import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon } from '@/lib/icons'; // Import necessary icons + EditIcon (Removed Play, Pause, Stop)
+import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon, CheckCircle } from '@/lib/icons'; // Import necessary icons + EditIcon (Removed Play, Pause, Stop)
 import './create-note.css'; // Link to the CSS file we will create
 
 export default function CreateNotePage() {
@@ -502,11 +502,11 @@ export default function CreateNotePage() {
                        checked={item.includeInContext}
                        onChange={() => toggleAttachmentContext(index)}
                      />
-                     {/* Use the styled checkmark from UI kit/global styles if available, or add basic span */}
                      <span className="checkmark">
-                        {/* Optional: SVG checkmark inside if needed */}
+                        {/* SVG checkmark icon */}
+                        {item.includeInContext && <CheckCircle />}
                      </span>
-                     <span className="context-label">AI</span> {/* Optional label */}
+                     <span className="label">Include in AI</span> {/* Using the styled label class from CSS */}
                    </label>
                    {/* Remove Button */}
                    <button

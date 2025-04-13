@@ -180,6 +180,156 @@
   margin-left: auto;
   flex-shrink: 0;
 }
+
+.checkbox-wrapper {
+  --checkbox-size: 25px;
+  --checkbox-color: #ff00ff;
+  --checkbox-shadow: rgba(255, 0, 255, 0.3);
+  --checkbox-border: rgba(255, 0, 255, 0.7);
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  padding: 10px;
+  flex-shrink: 0;
+}
+
+.checkbox-wrapper input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkbox-wrapper .checkmark {
+  position: relative;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  border: 2px solid var(--checkbox-border);
+  border-radius: 8px;
+  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 15px var(--checkbox-shadow);
+  overflow: hidden;
+}
+
+.checkbox-wrapper .checkmark::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, #ff00ff, #3863ff);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transform: scale(0) rotate(-45deg);
+}
+
+.checkbox-wrapper input:checked ~ .checkmark::before {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+}
+
+.checkbox-wrapper .checkmark svg {
+  width: 0;
+  height: 0;
+  color: #ffffff;
+  z-index: 1;
+  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+}
+
+.checkbox-wrapper input:checked ~ .checkmark svg {
+  width: 18px;
+  height: 18px;
+}
+
+.checkbox-wrapper:hover .checkmark {
+  border-color: var(--checkbox-color);
+  transform: scale(1.1);
+  box-shadow:
+      0 0 20px var(--checkbox-shadow),
+      0 0 40px var(--checkbox-shadow),
+      inset 0 0 10px var(--checkbox-shadow);
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.checkbox-wrapper input:checked ~ .checkmark {
+  animation: pulse 1s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+@keyframes pulse {
+  0% {
+      transform: scale(1);
+      box-shadow: 0 0 15px var(--checkbox-shadow);
+  }
+  50% {
+      transform: scale(0.95);
+      box-shadow:
+          0 0 25px var(--checkbox-shadow),
+          0 0 40px var(--checkbox-shadow);
+  }
+  100% {
+      transform: scale(1);
+      box-shadow: 0 0 15px var(--checkbox-shadow);
+  }
+}
+
+.checkbox-wrapper .label {
+  margin-left: 15px;
+  font-family: "Segoe UI", sans-serif;
+  color: transparent;
+  font-size: 18px;
+  text-shadow: 0 0 10px var(--checkbox-shadow);
+  opacity: 0.9;
+  transition: all 0.3s ease;
+  background: linear-gradient(90deg, #ff00ff, #9f8cff);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.checkbox-wrapper:hover .label {
+  opacity: 1;
+  transform: translateX(5px);
+}
+
+.checkbox-wrapper::after,
+.checkbox-wrapper::before {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--checkbox-color);
+  opacity: 0;
+  transition: all 0.5s ease;
+}
+
+.checkbox-wrapper::before {
+  left: -10px;
+  top: 50%;
+}
+
+.checkbox-wrapper::after {
+  right: -10px;
+  top: 50%;
+}
+
+.checkbox-wrapper:hover::before {
+  opacity: 1;
+  transform: translateX(-10px);
+  box-shadow: 0 0 10px var(--checkbox-color);
+}
+
+.checkbox-wrapper:hover::after {
+  opacity: 1;
+  transform: translateX(10px);
+  box-shadow: 0 0 10px var(--checkbox-color);
+}
+
 .attachments-section .attachment-delete-btn {
   background: none;
   border: none;
@@ -198,6 +348,11 @@
 .attachments-section .attachment-delete-btn svg {
   width: 16px;
   height: 16px;
+}
+
+.attachment-item-actions {
+  display: flex;
+  gap: 10px; 
 }
 
 /* Main Action Buttons */
