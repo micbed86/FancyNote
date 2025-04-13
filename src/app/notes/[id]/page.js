@@ -318,16 +318,49 @@ export default function NotePage({ params }) { // Renamed component
   // --- End New Attachment Handlers ---
   
   // --- Text Editing Handlers ---
-  const handleTextEditToggle = () => {
+  const handleTextEditToggle = async () => { // Made async
     if (isEditingText) {
-      // If toggling off (clicking "Done"), just change the state.
-      // The edited text remains in `editedText` state for the Save button.
-      // setEditedText(noteText); // REMOVED: This line incorrectly reverted changes.
+      // If toggling off (clicking "Done"), check if text changed and save if needed.
+      const textChanged = editedText !== noteText;
+      if (textChanged) {
+        console.log("Text changed, saving via Done button...");
+        setIsSaving(true); // Indicate saving process
+        setError(null);
+        try {
+          // Get auth token (needed if API call requires it, good practice)
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session) {
+            throw new Error('Could not get user session for authentication.');
+          }
+          // Call Supabase directly to update only text
+          const { error: updateError } = await supabase
+            .from('notes')
+            .update({ text: editedText })
+            .eq('id', noteId);
+
+          if (updateError) throw updateError;
+
+          console.log("Note text updated successfully via Done button.");
+          setNoteText(editedText); // Update local state upon success
+        } catch (error) {
+           console.error('Error saving note text via Done button:', error);
+           setError(`Failed to save text changes: ${error.message}`);
+           // Optionally revert editedText or keep it for user retry
+           // setEditedText(noteText); // Example revert
+           setIsSaving(false); // Ensure saving state is reset on error
+           return; // Stop execution if save failed
+        } finally {
+           setIsSaving(false); // Reset saving state
+        }
+      } else {
+         console.log("Text unchanged, exiting edit mode.");
+      }
+      setIsEditingText(false); // Exit edit mode regardless of save
     } else {
       // If toggling on, ensure editedText has the current noteText
       setEditedText(noteText);
+      setIsEditingText(true); // Enter edit mode
     }
-    setIsEditingText(!isEditingText);
   };
   
   const handleTextChange = (e) => {
@@ -341,17 +374,42 @@ export default function NotePage({ params }) { // Renamed component
     setError(null);
     console.log("Saving changes...");
   
-    // 1. Check if text has changed
+    // 1. Check if text has changed and if new attachments were added
     const textChanged = editedText !== noteText;
-  
-    // 2. Check if new attachments were added
     const hasNewAttachments = newAttachments.length > 0;
-  
-    if (!textChanged && !hasNewAttachments) {
-      console.log("No changes to save.");
-      setIsSaving(false);
-      // Optionally show a message "No changes detected"
-      return;
+
+    // Save button should primarily act if there are new attachments.
+    // If only text changed, the Done button should have handled it.
+    // If both changed, FormData will handle text along with files.
+    if (!hasNewAttachments) {
+        // If text also hasn't changed (or Done button failed silently?), do nothing.
+        if (!textChanged) {
+            console.log("No changes (including new attachments) to save via Save Changes button.");
+            setIsSaving(false);
+            return;
+        }
+        // If only text changed, it implies the user clicked Save Changes instead of Done.
+        // We could trigger the text save here too, or rely on the Done button logic.
+        // For simplicity, let's assume Done is the primary way to save text-only.
+        // If the user explicitly hits Save Changes with only text modified, maybe they expect it to save.
+        // Let's replicate the text save logic here for that edge case, though it's redundant with 'Done'.
+        console.log("Only text changed, but Save Changes clicked. Saving text...");
+        // Re-use logic similar to handleTextEditToggle's save part
+         try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !session) throw new Error('Auth session error.');
+            const { error: updateError } = await supabase.from('notes').update({ text: editedText }).eq('id', noteId);
+            if (updateError) throw updateError;
+            setNoteText(editedText);
+            setIsEditingText(false);
+            console.log("Text saved via Save Changes button.");
+         } catch (error) {
+             console.error('Error saving text via Save Changes button:', error);
+             setError(`Failed to save text changes: ${error.message}`);
+         } finally {
+             setIsSaving(false);
+         }
+         return; // Text saved (or failed), nothing more to do.
     }
   
     try {
@@ -372,6 +430,7 @@ export default function NotePage({ params }) { // Renamed component
       let formData = null;
       if (hasNewAttachments) {
         formData = new FormData();
+        console.log(`[handleSaveChanges] Attaching noteId to FormData: ${noteId} (Type: ${typeof noteId})`); // Add log here
         formData.append('noteId', noteId); // Add noteId to identify the note
         newAttachments.forEach((item, index) => {
           formData.append(`attachment_${index}`, item.file);
@@ -388,47 +447,41 @@ export default function NotePage({ params }) { // Renamed component
       // - If only text changed: Simple PATCH to update text field.
       // - If attachments changed (with or without text change): POST to a new endpoint (e.g., /api/notes/update-attachments) that handles uploads and updates.
   
-      if (hasNewAttachments) {
-        // Call endpoint that handles uploads and potentially text update
-        console.log("Calling API to upload attachments and update note...");
-        const response = await fetch('/api/notes/update', { // Assuming a new endpoint '/api/notes/update'
-          method: 'POST', // Using POST because of FormData/file uploads
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            // 'Content-Type' is set automatically by browser for FormData
-          },
-          body: formData,
-        });
-  
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result.error || `HTTP error! status: ${response.status}`);
-        }
-        console.log("Attachments uploaded and note updated:", result);
-  
-        // Update local state based on the response (which should include updated attachment lists)
-        setNoteText(result.updatedNote.text || editedText); // Update text from response or optimistic
-        setNoteFiles(result.updatedNote.files || []);
-        setNoteImages(result.updatedNote.images || []);
-        // setNoteVoice(result.updatedNote.voice || []); // Assuming voice isn't added here
-        setNewAttachments([]); // Clear newly added attachments list
-        setIsEditingText(false); // Exit text edit mode
-  
-      } else if (textChanged) {
-        // Call endpoint to only update text
-        console.log("Calling API to update note text...");
-        const { error: updateError } = await supabase
-          .from('notes')
-          .update({ text: editedText })
-          .eq('id', noteId);
-  
-        if (updateError) throw updateError;
-  
-        console.log("Note text updated successfully.");
-        // Update local state
-        setNoteText(editedText);
-        setIsEditingText(false); // Exit text edit mode
+      // If execution reaches here, it means hasNewAttachments is true.
+      // Text changes (if any) are included in the formData.
+      console.log("Calling API to upload attachments and potentially update text...");
+      const response = await fetch('/api/notes/update', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          // 'Content-Type' is set automatically by browser for FormData
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        // Use the specific error from the API response if available
+        throw new Error(result.error || `HTTP error! status: ${response.status}`);
       }
+      console.log("Attachments uploaded and note updated:", result);
+
+      // Update local state based on the response
+      // Ensure result.updatedNote exists before accessing its properties
+      if (result.updatedNote) {
+          setNoteText(result.updatedNote.text ?? editedText); // Use nullish coalescing
+          setNoteFiles(result.updatedNote.files || []);
+          setNoteImages(result.updatedNote.images || []);
+          // setNoteVoice(result.updatedNote.voice || []); // Assuming voice isn't added here
+      } else {
+          // Fallback if updatedNote is not returned, though it should be on success
+          console.warn("API response did not include updated note data. Using optimistic updates.");
+          if (textChanged) setNoteText(editedText);
+          // Cannot update files/images optimistically without their new paths/metadata
+      }
+
+      setNewAttachments([]); // Clear newly added attachments list
+      setIsEditingText(false); // Exit text edit mode after successful save
   
       // Optionally show success message
   
