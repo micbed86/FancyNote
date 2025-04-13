@@ -215,6 +215,12 @@
     font-size: 0.9em;
  }
 
+.text-content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; 
+}
+
 /* --- Embedded Images Section --- */
 .embedded-images-section summary {
   list-style: none; /* Remove default marker */

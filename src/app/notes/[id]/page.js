@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, use, useCallback } from 'react'; // Import use, useCallback
+import { useState, useEffect, use, useCallback, useRef } from 'react'; // Import use, useCallback, useRef
 // import SimpleReactLightbox, { SRLWrapper } from 'simple-react-lightbox'; // Removed lightbox import
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../../components/DashboardLayout';
-import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon
+import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon, CheckIcon } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon, CheckIcon
 import './note.css'; // Renamed CSS file
 
 export default function NotePage({ params }) { // Renamed component
@@ -24,7 +24,11 @@ export default function NotePage({ params }) { // Renamed component
   const [showMenu, setShowMenu] = useState(false); // State for delete menu
   const [error, setError] = useState(null);
   const [authToken, setAuthToken] = useState(null); // State to hold auth token for URLs
-  // TODO: Add state for editable content if implementing WYSIWYG
+  const [isEditingText, setIsEditingText] = useState(false); // State for text editing mode
+  const [editedText, setEditedText] = useState(''); // State for the edited text content
+  const [newAttachments, setNewAttachments] = useState([]); // State for newly added attachments { file: File, type: 'file' | 'image' }
+  const [isSaving, setIsSaving] = useState(false); // State for save operation in progress
+  const cameraInputRef = useRef(null); // Ref for the hidden camera input
 
   useEffect(() => {
     // Define the async function directly inside useEffect
@@ -80,7 +84,9 @@ export default function NotePage({ params }) { // Renamed component
 
         if (noteData) {
           setNoteTitle(noteData.title || 'Untitled Note');
-          setNoteText(noteData.text || ''); // Set text content
+          const fetchedText = noteData.text || '';
+          setNoteText(fetchedText); // Set text content
+          setEditedText(fetchedText); // Initialize edited text state
           setNoteFiles(noteData.files || []); // Set file attachments
           setNoteImages(noteData.images || []); // Set image attachments
           setNoteVoice(noteData.voice || []); // Set voice recordings
@@ -245,8 +251,160 @@ export default function NotePage({ params }) { // Renamed component
 
   };
   // --- End Attachment Deletion Handler ---
-
-
+  
+  // --- New Attachment Handlers (from Create Note) ---
+  const handleAddFile = (event) => {
+    const newFiles = Array.from(event.target.files);
+    setNewAttachments(prev => [...prev, ...newFiles.map(file => ({ file, type: 'file' }))]);
+    event.target.value = null; // Clear input
+  };
+  
+  const handleAddPhoto = (event) => {
+    const newPhotos = Array.from(event.target.files);
+    setNewAttachments(prev => [...prev, ...newPhotos.map(file => ({ file, type: 'image' }))]);
+    event.target.value = null; // Clear input
+  };
+  
+  const handleTakePhoto = () => {
+    cameraInputRef.current?.click();
+  };
+  
+  const handlePhotoCaptured = (event) => {
+    const capturedPhoto = event.target.files?.[0];
+    if (capturedPhoto) {
+      setNewAttachments(prev => [...prev, { file: capturedPhoto, type: 'image' }]);
+    }
+    event.target.value = null; // Clear input
+  };
+  
+  const removeNewAttachment = (indexToRemove) => {
+    setNewAttachments(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+  // --- End New Attachment Handlers ---
+  
+  // --- Text Editing Handlers ---
+  const handleTextEditToggle = () => {
+    if (isEditingText) {
+      // If toggling off, revert changes if needed (or just stop editing)
+      setEditedText(noteText); // Revert to original text when cancelling edit
+    } else {
+      // If toggling on, ensure editedText has the current noteText
+      setEditedText(noteText);
+    }
+    setIsEditingText(!isEditingText);
+  };
+  
+  const handleTextChange = (e) => {
+    setEditedText(e.target.value);
+  };
+  // --- End Text Editing Handlers ---
+  
+  // --- Save Changes Handler ---
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    setError(null);
+    console.log("Saving changes...");
+  
+    // 1. Check if text has changed
+    const textChanged = editedText !== noteText;
+  
+    // 2. Check if new attachments were added
+    const hasNewAttachments = newAttachments.length > 0;
+  
+    if (!textChanged && !hasNewAttachments) {
+      console.log("No changes to save.");
+      setIsSaving(false);
+      // Optionally show a message "No changes detected"
+      return;
+    }
+  
+    try {
+      // Get auth token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Could not get user session for authentication.');
+      }
+      const accessToken = session.access_token;
+  
+      // Prepare data payload
+      const updatePayload = {};
+      if (textChanged) {
+        updatePayload.text = editedText;
+      }
+  
+      // Prepare FormData if there are new attachments
+      let formData = null;
+      if (hasNewAttachments) {
+        formData = new FormData();
+        formData.append('noteId', noteId); // Add noteId to identify the note
+        newAttachments.forEach((item, index) => {
+          formData.append(`attachment_${index}`, item.file);
+          // Optionally send type if backend needs it: formData.append(`attachment_${index}_type`, item.type);
+        });
+        // If text also changed, add it to FormData as well, or handle separately
+        if (textChanged) {
+          formData.append('text', editedText);
+        }
+      }
+  
+      // --- API Call ---
+      // Decide which API call to make:
+      // - If only text changed: Simple PATCH to update text field.
+      // - If attachments changed (with or without text change): POST to a new endpoint (e.g., /api/notes/update-attachments) that handles uploads and updates.
+  
+      if (hasNewAttachments) {
+        // Call endpoint that handles uploads and potentially text update
+        console.log("Calling API to upload attachments and update note...");
+        const response = await fetch('/api/notes/update', { // Assuming a new endpoint '/api/notes/update'
+          method: 'POST', // Using POST because of FormData/file uploads
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            // 'Content-Type' is set automatically by browser for FormData
+          },
+          body: formData,
+        });
+  
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || `HTTP error! status: ${response.status}`);
+        }
+        console.log("Attachments uploaded and note updated:", result);
+  
+        // Update local state based on the response (which should include updated attachment lists)
+        setNoteText(result.updatedNote.text || editedText); // Update text from response or optimistic
+        setNoteFiles(result.updatedNote.files || []);
+        setNoteImages(result.updatedNote.images || []);
+        // setNoteVoice(result.updatedNote.voice || []); // Assuming voice isn't added here
+        setNewAttachments([]); // Clear newly added attachments list
+        setIsEditingText(false); // Exit text edit mode
+  
+      } else if (textChanged) {
+        // Call endpoint to only update text
+        console.log("Calling API to update note text...");
+        const { error: updateError } = await supabase
+          .from('notes')
+          .update({ text: editedText })
+          .eq('id', noteId);
+  
+        if (updateError) throw updateError;
+  
+        console.log("Note text updated successfully.");
+        // Update local state
+        setNoteText(editedText);
+        setIsEditingText(false); // Exit text edit mode
+      }
+  
+      // Optionally show success message
+  
+    } catch (error) {
+      console.error('Error saving note changes:', error);
+      setError(`Failed to save changes: ${error.message}`);
+      // Optionally revert UI changes or keep them for user to retry
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  // --- End Save Changes Handler ---
   if (loading) {
     return (
       <DashboardLayout pageTitle="Loading Note...">
@@ -326,10 +484,32 @@ export default function NotePage({ params }) { // Renamed component
         <div className="note-content-area">
           {/* WYSIWYG Editor Placeholder */}
           {/* TODO: Integrate a WYSIWYG library (e.g., TipTap, Quill, Slate) */}
-          {/* TODO: Replace with actual WYSIWYG editor integration */}
-          <div className="wysiwyg-editor" style={{ border: '1px solid #ccc', minHeight: '150px', padding: '10px' }}>
-             {/* Display fetched text content (simple paragraph for now) */}
-             <p>{noteText || 'No text content.'}</p>
+          {/* Text Content Area with Edit Toggle */}
+          <div className="text-content-section card"> {/* Added card style */}
+            <div className="text-content-header">
+              <h3 className="header3">Note Content</h3>
+              <button
+                onClick={handleTextEditToggle}
+                className={`standard-button button-secondary edit-text-button ${isEditingText ? 'editing' : ''}`}
+                title={isEditingText ? 'Finish Editing Text' : 'Edit Text'}
+              >
+                {isEditingText ? <CheckIcon /> : <EditIcon />}
+                {isEditingText ? 'Done' : 'Edit'}
+              </button>
+            </div>
+            {isEditingText ? (
+              <textarea
+                className="textarea note-text-edit" // Added specific class
+                value={editedText}
+                onChange={handleTextChange}
+                placeholder="Enter note content..."
+                rows={10} // Adjust as needed
+              />
+            ) : (
+              <div className="note-text-display" style={{ whiteSpace: 'pre-wrap', padding: '10px', border: '1px solid transparent' }}> {/* Added basic display styling */}
+                {noteText || <span style={{ color: '#888' }}>No text content.</span>} {/* Placeholder if empty */}
+              </div>
+            )}
           </div>
 
           {/* Embedded Images Section */}
@@ -383,10 +563,21 @@ export default function NotePage({ params }) { // Renamed component
             <div className="attachments-header">
               <h3 className="header3">Attachments</h3>
               <div className="attachment-actions">
-                {/* TODO: Add functionality to these buttons */}
-                <button className="standard-button button-secondary" title="Add File"><FileIcon /></button>
-                <button className="standard-button button-secondary" title="Add Photo from Gallery"><ImageIcon /></button>
-                <button className="standard-button button-secondary" title="Take Photo with Camera"><CameraIcon /></button>
+                {/* Hidden inputs for adding attachments */}
+                <input type="file" id="noteFileInput" style={{ display: 'none' }} onChange={handleAddFile} multiple />
+                <input type="file" id="notePhotoInput" accept="image/*" style={{ display: 'none' }} onChange={handleAddPhoto} multiple />
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={handlePhotoCaptured}
+                />
+                {/* Buttons to trigger hidden inputs */}
+                <button className="standard-button button-secondary" title="Add File" onClick={() => document.getElementById('noteFileInput').click()}><FileIcon /></button>
+                <button className="standard-button button-secondary" title="Add Photo from Gallery" onClick={() => document.getElementById('notePhotoInput').click()}><ImageIcon /></button>
+                <button className="standard-button button-secondary" title="Take Photo with Camera" onClick={handleTakePhoto}><CameraIcon /></button>
               </div>
             </div>
             <ul className="attachment-list">
@@ -417,7 +608,31 @@ export default function NotePage({ params }) { // Renamed component
                  </li>
               ))}
             </ul>
-          </div>
+            {/* Display newly added (staged) attachments */}
+            {newAttachments.length > 0 && (
+              <>
+                <h4 className="header4" style={{ marginTop: '15px', marginBottom: '5px' }}>New Attachments (to be saved):</h4>
+                <ul className="attachment-list new-attachment-list">
+                  {newAttachments.map((item, index) => (
+                    <li key={index} className="attachment-item new-attachment-item">
+                      <div className="attachment-info">
+                        {item.type === 'image' ? <ImageIcon /> : <FileIcon />}
+                        <span className="attachment-name" title={item.file.name}>{item.file.name}</span>
+                        <span className="attachment-size">({(item.file.size / 1024).toFixed(1)} KB)</span>
+                      </div>
+                      <button
+                        onClick={() => removeNewAttachment(index)}
+                        className="control-button delete-button attachment-delete-btn"
+                        title="Remove New Attachment"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            </div>
 
           {/* Voice Recordings Section */}
           {noteVoice.length > 0 && (
@@ -455,8 +670,15 @@ export default function NotePage({ params }) { // Renamed component
           {/* Bottom Action Buttons */}
           {/* TODO: Add functionality (Save, Share, Re-process) */}
           <div className="note-actions">
-             <button className="standard-button button-secondary" title="Share Note"><ShareIcon /> Share</button>
-             <button className="standard-button button-primary" title="Save Changes"><SaveIcon /> Save Changes</button>
+             <button className="standard-button button-secondary" title="Share Note" disabled={isSaving}><ShareIcon /> Share</button>
+             <button
+               className="standard-button button-primary"
+               title="Save Changes"
+               onClick={handleSaveChanges}
+               disabled={isSaving || (!isEditingText && newAttachments.length === 0 && editedText === noteText)} // Disable if saving or no changes staged
+             >
+               <SaveIcon /> {isSaving ? 'Saving...' : 'Save Changes'}
+             </button>
              {/* Add Re-process button if needed */}
           </div> {/* End of note-actions */}
         </div> {/* End of note-content-area */}
