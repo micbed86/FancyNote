@@ -131,10 +131,10 @@ export default function AiModelsCard({ initialModelId, onModelSelect }) {
             <div className="model-details">
               <p><strong>Context Length:</strong> {model.context_length.toLocaleString()} tokens</p>
               <p><strong>Pricing:</strong> {
-                 (model.pricing && typeof model.pricing.input === 'number' && typeof model.pricing.output === 'number')
-                   ? `$${(model.pricing.input * 1000000).toFixed(2)} / $${(model.pricing.output * 1000000).toFixed(2)}`
+                 (model.pricing && typeof model.pricing.prompt === 'string' && typeof model.pricing.completion === 'string') // Check for string type from API
+                   ? `$${(parseFloat(model.pricing.prompt) * 1000000).toFixed(2)} / $${(parseFloat(model.pricing.completion) * 1000000).toFixed(2)}` // Use parseFloat
                    : 'N/A'
-              } per million tokens (Input/Output)</p>
+              } per million tokens (Prompt/Completion)</p>
             </div>
             {/* Styled button-like indicator */}
             {selectedModel?.id === model.id &&
