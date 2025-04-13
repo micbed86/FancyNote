@@ -25,8 +25,7 @@ export default function NotePage({ params }) { // Renamed component
   const [authToken, setAuthToken] = useState(null); // State to hold auth token for URLs
   const [isEditingText, setIsEditingText] = useState(false); // State for text editing mode
   const [editedText, setEditedText] = useState(''); // State for the edited text content
-  const [newAttachments, setNewAttachments] = useState([]); // State for newly added attachments { file: File, type: 'file' | 'image' }
-  const [isSaving, setIsSaving] = useState(false); // State for save operation in progress
+  // isSaving and newAttachments states are removed.
   const cameraInputRef = useRef(null); // Ref for the hidden camera input
 
   useEffect(() => {
@@ -286,36 +285,88 @@ export default function NotePage({ params }) { // Renamed component
 
   };
   // --- End Attachment Deletion Handler ---
-  
-  // --- New Attachment Handlers (from Create Note) ---
+  // --- Attachment Upload Function ---
+  const handleUploadAttachment = async (file) => {
+    if (!file || !noteId) return;
+
+    console.log(`[UploadAttachment] Starting upload for: ${file.name}`);
+    // TODO: Add visual feedback for upload in progress (e.g., spinner next to file list item)
+    setError(null); // Clear previous errors
+
+    const formData = new FormData();
+    formData.append('noteId', noteId);
+    formData.append('attachment', file); // Send the single file
+
+    try {
+      // Get auth token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Could not get user session for authentication.');
+      }
+      const accessToken = session.access_token;
+
+      const response = await fetch('/api/notes/add-attachment', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          // Content-Type is set automatically for FormData
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || `HTTP error! status: ${response.status}`);
+      }
+
+      console.log('[UploadAttachment] Upload successful:', result);
+
+      // Update local state using the full arrays returned by the API for consistency
+      if (result.updatedNoteArrays) {
+          console.log("[UploadAttachment] Updating local state with arrays from API response.");
+          setNoteFiles(result.updatedNoteArrays.files || []);
+          setNoteImages(result.updatedNoteArrays.images || []);
+      } else {
+          // Log an error if the expected arrays are not returned
+          console.error("[UploadAttachment] API response missing 'updatedNoteArrays'. Cannot reliably update UI state.");
+          setError("Failed to update attachment list after upload. Please refresh the page.");
+      }
+      // TODO: Remove visual feedback for upload completion
+
+    } catch (error) {
+      console.error(`[UploadAttachment] Error uploading ${file.name}:`, error);
+      setError(`Failed to upload ${file.name}: ${error.message}`);
+      // TODO: Show error feedback to the user (e.g., next to the file list item)
+    }
+  };
+  // --- End Attachment Upload Function ---
+
+  // --- Attachment Input Handlers (Call Upload Immediately) ---
   const handleAddFile = (event) => {
-    const newFiles = Array.from(event.target.files);
-    setNewAttachments(prev => [...prev, ...newFiles.map(file => ({ file, type: 'file' }))]);
+    const files = Array.from(event.target.files);
+    files.forEach(file => handleUploadAttachment(file)); // Upload each file
     event.target.value = null; // Clear input
   };
-  
+
   const handleAddPhoto = (event) => {
-    const newPhotos = Array.from(event.target.files);
-    setNewAttachments(prev => [...prev, ...newPhotos.map(file => ({ file, type: 'image' }))]);
+    const files = Array.from(event.target.files);
+    files.forEach(file => handleUploadAttachment(file)); // Upload each photo
     event.target.value = null; // Clear input
   };
-  
+
   const handleTakePhoto = () => {
     cameraInputRef.current?.click();
   };
-  
+
   const handlePhotoCaptured = (event) => {
-    const capturedPhoto = event.target.files?.[0];
-    if (capturedPhoto) {
-      setNewAttachments(prev => [...prev, { file: capturedPhoto, type: 'image' }]);
+    const file = event.target.files?.[0];
+    if (file) {
+      handleUploadAttachment(file); // Upload captured photo
     }
     event.target.value = null; // Clear input
   };
-  
-  const removeNewAttachment = (indexToRemove) => {
-    setNewAttachments(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
-  // --- End New Attachment Handlers ---
+  // --- End Attachment Input Handlers ---
   
   // --- Text Editing Handlers ---
   const handleTextEditToggle = async () => { // Made async
@@ -324,10 +375,10 @@ export default function NotePage({ params }) { // Renamed component
       const textChanged = editedText !== noteText;
       if (textChanged) {
         console.log("Text changed, saving via Done button...");
-        setIsSaving(true); // Indicate saving process
+        // isSaving state is removed, no need to set it.
         setError(null);
         try {
-          // Get auth token (needed if API call requires it, good practice)
+          // Get auth token
           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           if (sessionError || !session) {
             throw new Error('Could not get user session for authentication.');
@@ -347,10 +398,9 @@ export default function NotePage({ params }) { // Renamed component
            setError(`Failed to save text changes: ${error.message}`);
            // Optionally revert editedText or keep it for user retry
            // setEditedText(noteText); // Example revert
-           setIsSaving(false); // Ensure saving state is reset on error
            return; // Stop execution if save failed
         } finally {
-           setIsSaving(false); // Reset saving state
+           // No state to reset here anymore
         }
       } else {
          console.log("Text unchanged, exiting edit mode.");
@@ -368,132 +418,7 @@ export default function NotePage({ params }) { // Renamed component
   };
   // --- End Text Editing Handlers ---
   
-  // --- Save Changes Handler ---
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    setError(null);
-    console.log("Saving changes...");
-  
-    // 1. Check if text has changed and if new attachments were added
-    const textChanged = editedText !== noteText;
-    const hasNewAttachments = newAttachments.length > 0;
-
-    // Save button should primarily act if there are new attachments.
-    // If only text changed, the Done button should have handled it.
-    // If both changed, FormData will handle text along with files.
-    if (!hasNewAttachments) {
-        // If text also hasn't changed (or Done button failed silently?), do nothing.
-        if (!textChanged) {
-            console.log("No changes (including new attachments) to save via Save Changes button.");
-            setIsSaving(false);
-            return;
-        }
-        // If only text changed, it implies the user clicked Save Changes instead of Done.
-        // We could trigger the text save here too, or rely on the Done button logic.
-        // For simplicity, let's assume Done is the primary way to save text-only.
-        // If the user explicitly hits Save Changes with only text modified, maybe they expect it to save.
-        // Let's replicate the text save logic here for that edge case, though it's redundant with 'Done'.
-        console.log("Only text changed, but Save Changes clicked. Saving text...");
-        // Re-use logic similar to handleTextEditToggle's save part
-         try {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError || !session) throw new Error('Auth session error.');
-            const { error: updateError } = await supabase.from('notes').update({ text: editedText }).eq('id', noteId);
-            if (updateError) throw updateError;
-            setNoteText(editedText);
-            setIsEditingText(false);
-            console.log("Text saved via Save Changes button.");
-         } catch (error) {
-             console.error('Error saving text via Save Changes button:', error);
-             setError(`Failed to save text changes: ${error.message}`);
-         } finally {
-             setIsSaving(false);
-         }
-         return; // Text saved (or failed), nothing more to do.
-    }
-  
-    try {
-      // Get auth token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        throw new Error('Could not get user session for authentication.');
-      }
-      const accessToken = session.access_token;
-  
-      // Prepare data payload
-      const updatePayload = {};
-      if (textChanged) {
-        updatePayload.text = editedText;
-      }
-  
-      // Prepare FormData if there are new attachments
-      let formData = null;
-      if (hasNewAttachments) {
-        formData = new FormData();
-        console.log(`[handleSaveChanges] Attaching noteId to FormData: ${noteId} (Type: ${typeof noteId})`); // Add log here
-        formData.append('noteId', noteId); // Add noteId to identify the note
-        newAttachments.forEach((item, index) => {
-          formData.append(`attachment_${index}`, item.file);
-          // Optionally send type if backend needs it: formData.append(`attachment_${index}_type`, item.type);
-        });
-        // If text also changed, add it to FormData as well, or handle separately
-        if (textChanged) {
-          formData.append('text', editedText);
-        }
-      }
-  
-      // --- API Call ---
-      // Decide which API call to make:
-      // - If only text changed: Simple PATCH to update text field.
-      // - If attachments changed (with or without text change): POST to a new endpoint (e.g., /api/notes/update-attachments) that handles uploads and updates.
-  
-      // If execution reaches here, it means hasNewAttachments is true.
-      // Text changes (if any) are included in the formData.
-      console.log("Calling API to upload attachments and potentially update text...");
-      const response = await fetch('/api/notes/update', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          // 'Content-Type' is set automatically by browser for FormData
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        // Use the specific error from the API response if available
-        throw new Error(result.error || `HTTP error! status: ${response.status}`);
-      }
-      console.log("Attachments uploaded and note updated:", result);
-
-      // Update local state based on the response
-      // Ensure result.updatedNote exists before accessing its properties
-      if (result.updatedNote) {
-          setNoteText(result.updatedNote.text ?? editedText); // Use nullish coalescing
-          setNoteFiles(result.updatedNote.files || []);
-          setNoteImages(result.updatedNote.images || []);
-          // setNoteVoice(result.updatedNote.voice || []); // Assuming voice isn't added here
-      } else {
-          // Fallback if updatedNote is not returned, though it should be on success
-          console.warn("API response did not include updated note data. Using optimistic updates.");
-          if (textChanged) setNoteText(editedText);
-          // Cannot update files/images optimistically without their new paths/metadata
-      }
-
-      setNewAttachments([]); // Clear newly added attachments list
-      setIsEditingText(false); // Exit text edit mode after successful save
-  
-      // Optionally show success message
-  
-    } catch (error) {
-      console.error('Error saving note changes:', error);
-      setError(`Failed to save changes: ${error.message}`);
-      // Optionally revert UI changes or keep them for user to retry
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  // --- End Save Changes Handler ---
+  // handleSaveChanges function is removed.
   if (loading) {
     return (
       <DashboardLayout pageTitle="Loading Note...">
@@ -696,29 +621,7 @@ export default function NotePage({ params }) { // Renamed component
               ))}
             </ul>
             {/* Display newly added (staged) attachments */}
-            {newAttachments.length > 0 && (
-              <>
-                <h4 className="header4" style={{ marginTop: '15px', marginBottom: '5px' }}>New Attachments (to be saved):</h4>
-                <ul className="attachment-list new-attachment-list">
-                  {newAttachments.map((item, index) => (
-                    <li key={index} className="attachment-item new-attachment-item">
-                      <div className="attachment-info">
-                        {item.type === 'image' ? <ImageIcon /> : <FileIcon />}
-                        <span className="attachment-name" title={item.file.name}>{item.file.name}</span>
-                        <span className="attachment-size">({(item.file.size / 1024).toFixed(1)} KB)</span>
-                      </div>
-                      <button
-                        onClick={() => removeNewAttachment(index)}
-                        className="control-button delete-button attachment-delete-btn"
-                        title="Remove New Attachment"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+            {/* Removed display block for 'newAttachments' as they are uploaded immediately */}
             </div>
 
           {/* Voice Recordings Section */}
@@ -757,15 +660,8 @@ export default function NotePage({ params }) { // Renamed component
           {/* Bottom Action Buttons */}
           {/* TODO: Add functionality (Save, Share, Re-process) */}
           <div className="note-actions">
-             <button className="standard-button button-secondary" title="Share Note" disabled={isSaving}><ShareIcon /> Share</button>
-             <button
-               className="standard-button button-primary"
-               title="Save Changes"
-               onClick={handleSaveChanges}
-               disabled={isSaving || (!isEditingText && newAttachments.length === 0 && editedText === noteText)} // Disable if saving or no changes staged
-             >
-               <SaveIcon /> {isSaving ? 'Saving...' : 'Save Changes'}
-             </button>
+             <button className="standard-button button-secondary" title="Share Note"><ShareIcon /> Share</button> {/* Removed disabled={isSaving} */}
+             {/* Save Changes button removed */}
              {/* Add Re-process button if needed */}
           </div> {/* End of note-actions */}
         </div> {/* End of note-content-area */}
