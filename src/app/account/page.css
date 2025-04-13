@@ -55,9 +55,9 @@
   /* Use .account-section styles for consistency */
   background: rgba(30, 30, 30, 0.6);
   backdrop-filter: blur(12px);
-  border-radius: 0 0 16px 16px; /* Round bottom corners */
+  border-radius: 16px 16px 16px 16px; /* Round bottom corners */
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-top: none; /* Remove top border as tabs handle it */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: 25px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   margin-top: -1px; /* Overlap slightly with tab bottom border */

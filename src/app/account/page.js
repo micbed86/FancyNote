@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
 import { CameraIcon, LockIcon, AccountIcon, EnvelopeIcon, TicketIcon } from '@/lib/icons'; // Added TicketIcon if needed by BillingCard, or remove if BillingCard handles its own icon
-import BillingCard from './components/BillingCard'; // Import the new component
+import BillingCard from './components/BillingCard';
+import AiModelsCard from './components/AiModelsCard';
 import './page.css'; // Import the new CSS file
 
 export default function AccountPage() {
@@ -31,7 +32,9 @@ export default function AccountPage() {
   const [emailMessage, setEmailMessage] = useState({ type: '', text: '' });
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   // Add state for AI and Storage settings if they need to be fetched/saved
-  const [aiSettings, setAiSettings] = useState({ apiKey: '', model: 'google/gemma-3-27b-it:free', systemPrompt: '' });
+  // Initialize with default structure, values loaded in useEffect
+  const [aiSettings, setAiSettings] = useState({ apiKey: '', model: null, systemPrompt: '' });
+  const [aiSettingsMessage, setAiSettingsMessage] = useState({ type: '', text: '' }); // Separate message state for AI settings
   // FTP State Removed
   const [projectCredits, setProjectCredits] = useState(null); // State for project credits
 
@@ -62,12 +65,17 @@ export default function AccountPage() {
           setEmailData({
             email: user.email || ''
           });
-          // TODO: Fetch AI and Storage settings from profile metadata or separate table
-          setAiSettings({
-            apiKey: profile.openrouter_api_key || '',
-            model: profile.llm_model || 'google/gemma-3-27b-it:free',
-            systemPrompt: profile.ai_system_prompt || ''
-          });
+          // Correctly load from ai_settings JSONB column
+          if (profile.ai_settings && typeof profile.ai_settings === 'object') {
+            setAiSettings({
+              apiKey: profile.ai_settings.apiKey || '',
+              model: profile.ai_settings.model || null, // Store the model ID
+              systemPrompt: profile.ai_settings.systemPrompt || ''
+            });
+          } else {
+             // Set defaults if ai_settings is missing or not an object
+             setAiSettings({ apiKey: '', model: null, systemPrompt: '' });
+          }
           // FTP State Population Removed
           setProjectCredits(profile.project_credits ?? 0); // Set project credits state
 
@@ -276,42 +284,134 @@ export default function AccountPage() {
   const handleCreditsUpdate = (newCredits) => {
   };
 
-  // Handlers for AI and Storage settings changes
-  const handleAiSettingsChange = (e) => {
+  // Handler for API Key and System Prompt changes
+  const handleAiInputChange = (e) => {
     const { id, value } = e.target;
     setAiSettings(prev => ({ ...prev, [id]: value }));
+    // Clear message on input change
+    if (aiSettingsMessage.text) {
+      setAiSettingsMessage({ type: '', text: '' });
+    }
   };
 
   // FTP Handlers Removed (handleFtpSettingsChange, saveFtpSettings, testFtpConnection)
 
-  // TODO: Implement functions to save AI settings
+  // Function to save API Key and System Prompt (triggered by the main save button)
   const saveAiSettings = async () => {
     setUpdating(true);
-    setMessage({ type: '', text: '' });
-    console.log('Saving AI Settings:', aiSettings);
-    // Example Supabase update (adjust table/column names)
-    /*
+    setAiSettingsMessage({ type: '', text: '' }); // Use dedicated message state
+    console.log('Saving AI Key & Prompt:', { apiKey: aiSettings.apiKey, systemPrompt: aiSettings.systemPrompt });
+
     try {
+      // Fetch current settings to merge, ensuring model ID isn't overwritten
+       const { data: currentProfile, error: fetchError } = await supabase
+         .from('profiles')
+         .select('ai_settings')
+         .eq('id', user.id)
+         .single();
+
+       if (fetchError) {
+          console.error("Error fetching current profile before saving AI settings:", fetchError);
+          throw new Error('Could not fetch current settings before saving.');
+       }
+
+       const currentDbSettings = currentProfile?.ai_settings || {};
+
+       // Prepare the update object, preserving the model ID from DB/state
+       const settingsToUpdate = {
+         ...currentDbSettings, // Start with existing settings from DB
+         apiKey: aiSettings.apiKey, // Update API Key from state
+         systemPrompt: aiSettings.systemPrompt, // Update System Prompt from state
+         model: aiSettings.model, // Ensure model from state is included (in case it was just updated)
+         updated_at: new Date().toISOString()
+       };
+       
+       // Remove updated_at if it already exists in currentDbSettings to avoid nested objects if structure is wrong
+       if (currentDbSettings.updated_at) {
+          delete settingsToUpdate.updated_at; // Remove old one before adding new
+          settingsToUpdate.updated_at = new Date().toISOString();
+       }
+
+
       const { error } = await supabase
         .from('profiles')
         .update({
-          openrouter_api_key: aiSettings.apiKey,
-          llm_model: aiSettings.model,
-          ai_system_prompt: aiSettings.systemPrompt,
-          updated_at: new Date()
+          ai_settings: settingsToUpdate
         })
         .eq('id', user.id);
+
       if (error) throw error;
-      setMessage({ type: 'success', text: 'AI settings saved!' });
+      setAiSettingsMessage({ type: 'success', text: 'API Key and System Prompt saved!' });
+      setTimeout(() => setAiSettingsMessage({ type: '', text: '' }), 3000); // Clear message
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to save AI settings.' });
+      setAiSettingsMessage({ type: 'error', text: 'Failed to save API Key/System Prompt.' });
       console.error('Error saving AI settings:', error);
     } finally {
       setUpdating(false);
     }
-    */
-    alert('Saving AI settings not implemented yet.');
-    setUpdating(false);
+  };
+
+  // Function to handle auto-saving model selection from AiModelsCard
+  const handleModelUpdate = async (selectedModelId) => {
+     console.log('Model selected in child, updating parent state and saving:', selectedModelId);
+     // Optimistically update local state first
+     setAiSettings(prev => ({ ...prev, model: selectedModelId }));
+     
+     // Use a temporary updating state specific to model saving? Or reuse general 'updating'?
+     // For simplicity, let's reuse 'updating' for now, but ideally, it would be separate.
+     setUpdating(true);
+     setAiSettingsMessage({ type: '', text: '' }); // Clear previous messages
+
+     try {
+       // Fetch current settings to merge, ensuring other fields aren't overwritten
+       const { data: currentProfile, error: fetchError } = await supabase
+         .from('profiles')
+         .select('ai_settings')
+         .eq('id', user.id)
+         .single();
+
+       if (fetchError) {
+          console.error("Error fetching current profile before saving model:", fetchError);
+          // Revert optimistic update? Or show error?
+          setAiSettings(prev => ({ ...prev, model: currentProfile?.ai_settings?.model || null })); // Revert if possible
+          throw new Error('Could not fetch current settings before saving model.');
+       }
+
+       const currentDbSettings = currentProfile?.ai_settings || {};
+       
+       // Prepare the update object
+       const settingsToUpdate = {
+         ...currentDbSettings,
+         model: selectedModelId, // Update the model ID
+         apiKey: aiSettings.apiKey, // Include current API key from state
+         systemPrompt: aiSettings.systemPrompt, // Include current prompt from state
+         updated_at: new Date().toISOString()
+       };
+       
+       // Remove updated_at if it already exists
+       if (currentDbSettings.updated_at) {
+          delete settingsToUpdate.updated_at;
+          settingsToUpdate.updated_at = new Date().toISOString();
+       }
+
+
+       const { error } = await supabase
+         .from('profiles')
+         .update({ ai_settings: settingsToUpdate })
+         .eq('id', user.id);
+
+       if (error) throw error;
+       setAiSettingsMessage({ type: 'success', text: 'Model selection saved!' });
+       setTimeout(() => setAiSettingsMessage({ type: '', text: '' }), 3000); // Clear message
+
+     } catch (error) {
+       setAiSettingsMessage({ type: 'error', text: 'Failed to save model selection.' });
+       console.error('Error saving model selection:', error);
+       // Optionally revert local state if save fails
+       // setAiSettings(prev => ({ ...prev, model: currentProfile?.ai_settings?.model || null }));
+     } finally {
+       setUpdating(false); // Reset general updating state
+     }
   };
 
   // handleCreditsUpdate might need adjustment if BillingCard modifies projectCredits directly
@@ -356,7 +456,8 @@ export default function AccountPage() {
             <div className="user-name-display">
               <h2 className="user-full-name">{formData.firstName} {formData.lastName}</h2>
             </div>
-            {message.text && <div className={`message ${message.type}`}>{message.text}</div>}
+            {/* Use general message for profile updates */}
+            {message.text && activeTab === 'profile' && <div className={`message ${message.type}`}>{message.text}</div>}
             <form className="account-form">
               <div style={{ display: 'flex', gap: '20px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
@@ -376,32 +477,26 @@ export default function AccountPage() {
 
         <div className={`tab-content ${activeTab === 'ai' ? 'active' : ''}`}>
           <h2 className="section-title">AI (LLM) Settings</h2>
-          {message.text && <div className={`message ${message.type}`}>{message.text}</div>}
-          {/* AI Settings Form - Adapted from .context/Settings Tab - AI (LLM) Content.md */}
+          {/* Use dedicated AI settings message */}
+          {aiSettingsMessage.text && <div className={`message ${aiSettingsMessage.type}`}>{aiSettingsMessage.text}</div>}
           <form className="account-form" onSubmit={(e) => { e.preventDefault(); saveAiSettings(); }}>
              <div className="form-group">
                 <label htmlFor="apiKey">Openrouter API Key</label>
-                <input type="password" id="apiKey" className="account-input" placeholder="sk-or-..." aria-label="Openrouter API Key" value={aiSettings.apiKey} onChange={handleAiSettingsChange} />
-             </div>
-             <div className="form-group">
-                <label htmlFor="model">LLM Model (via Openrouter)</label>
-                {/* TODO: Fetch model list dynamically from OpenRouter if possible */}
-                <select id="model" className="account-input" aria-label="Select LLM Model" value={aiSettings.model} onChange={handleAiSettingsChange}>
-                    <option value="google/gemma-3-27b-it:free">Google Gemma 3 27B IT (Free)</option>
-                    <option value="mistralai/mixtral-8x7b-instruct">Mistral Mixtral 8x7B Instruct</option>
-                    <option value="openai/gpt-4o">OpenAI GPT-4o</option>
-                    <option value="anthropic/claude-3-haiku">Anthropic Claude 3 Haiku</option>
-                    {/* Add other relevant models */}
-                </select>
+                <input type="password" id="apiKey" className="account-input" placeholder="sk-or-..." aria-label="Openrouter API Key" value={aiSettings.apiKey} onChange={handleAiInputChange} />
              </div>
              <div className="form-group">
                 <label htmlFor="systemPrompt">System Prompt for AI Note Structuring</label>
-                <textarea id="systemPrompt" className="account-input" style={{ minHeight: '150px', resize: 'vertical' }} placeholder="Example: You are an expert meeting summarizer..." aria-label="System Prompt for AI" value={aiSettings.systemPrompt} onChange={handleAiSettingsChange}></textarea>
+                <textarea id="systemPrompt" className="account-input" style={{ minHeight: '150px', resize: 'vertical' }} placeholder="Example: You are an expert meeting summarizer..." aria-label="System Prompt for AI" value={aiSettings.systemPrompt} onChange={handleAiInputChange}></textarea>
              </div>
              <button type="submit" className="account-btn" disabled={updating}>
                {updating ? 'Saving...' : 'Save AI Settings'}
              </button>
           </form>
+          {/* Pass initial model ID and the update handler */}
+          <AiModelsCard
+             initialModelId={aiSettings.model}
+             onModelSelect={handleModelUpdate}
+          />
         </div>
 
         {/* FTP Tab Content Removed */}
