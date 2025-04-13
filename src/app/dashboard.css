@@ -628,3 +628,23 @@
   }
 
 }
+
+@media (max-width: 480px) {
+  .content-area {
+    padding: 15px 10px; /* Further reduce padding */
+  }
+
+  .topbar {
+    padding: 0 10px; /* Reduce topbar padding */
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .account-section {
+    padding: 20px 15px; /* Reduce account section padding */
+  }
+
+  .user-full-name {
+    font-size: 28px; /* Slightly smaller name */
+  }
+}

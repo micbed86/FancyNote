@@ -1441,23 +1441,62 @@
 
 /* Responsive Styles */
 @media (max-width: 768px) {
-  .project-container {
-    padding: 0 15px; /* Slightly more padding */
-    gap: 20px; /* Reduce gap between sections */
+  /* Apply flex column to main content area */
+  .note-content-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center items */
+    gap: 25px;
   }
 
-  .project-header {
-    flex-direction: column; /* Stack header items */
-    align-items: flex-start; /* Align items to the start */
-    gap: 10px; /* Add gap between stacked items */
+  /* Ensure cards/sections take appropriate width */
+  .wysiwyg-editor,
+  .embedded-images-section,
+  .attachments-section,
+  .card { /* Target general cards used for tune/outline */
+    width: 100%;
+    max-width: 500px; /* Optional: Limit max width for readability */
+    box-sizing: border-box; /* Include padding/border in width */
   }
 
-  .project-title-input {
-    width: 100%; /* Make title input full width */
+  .project-container { /* Assuming this is the main wrapper */
+    padding: 0 15px;
+    gap: 20px;
   }
 
-  .project-menu {
-    align-self: flex-end; /* Keep menu button to the right */
+  /* Adjust note header for mobile */
+  .note-header { /* Use correct class name */
+    flex-direction: column; /* Stack title and menu */
+    align-items: center; /* Center items */
+    gap: 15px; /* Add gap */
+    margin-bottom: 25px;
+  }
+  .note-title-container {
+    width: 100%; /* Allow title container to take full width */
+    justify-content: center; /* Center title/edit icon */
+  }
+
+  .note-title-input { /* Use correct class name */
+    width: 100%;
+    text-align: center; /* Center text in input */
+    font-size: 1.6rem; /* Slightly larger title */
+  }
+  .note-title-container h2.header2 { /* Adjust displayed title */
+     font-size: 1.6rem;
+     text-align: center;
+     width: 100%; /* Ensure it can center */
+  }
+  .edit-title-button {
+    font-size: 1.2rem; /* Make edit icon slightly larger */
+  }
+
+  .note-actions-menu { /* Use correct class name */
+     /* Centered due to parent (.note-header) alignment */
+     position: relative; /* Reset positioning if needed */
+     align-self: center; /* Explicitly center */
+  }
+  .menu-toggle-button {
+     font-size: 1.5rem; /* Make menu icon larger */
   }
   
   .tune-options {
@@ -1470,13 +1509,26 @@
   }
   
   .fine-tune-options {
-    grid-template-columns: 1fr 1fr; /* Keep 2 columns for medium screens */
-    gap: 15px; /* Reduce gap */
+    grid-template-columns: 1fr; /* Single column */
+    gap: 15px;
+  }
+  /* Center image thumbnails */
+  .image-thumbnail-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Adjust size */
+    gap: 15px;
+    justify-items: center; /* Center items in grid cells */
+  }
+  .thumbnail-item.attachment-item {
+     width: 120px; /* Give thumbnails a fixed width */
+     height: auto;
   }
 
   /* Reduce padding inside cards on mobile */
-  .card {
-    padding: 20px; /* Keep reasonable padding */
+  .card { /* General card adjustments */
+    padding: 20px;
+    width: 100%; /* Ensure cards take full width */
+    max-width: 500px; /* Consistent max-width */
+    box-sizing: border-box;
   }
 
   /* Adjust text area height */
@@ -1498,55 +1550,74 @@
   }
 
   /* Adjust project title size */
-  .project-title,
-  .project-title-input {
-    font-size: 20px;
-  }
+  /* Remove redundant project-title styles */
   
   /* Make action buttons slightly smaller */
+  /* Adjust action buttons at the bottom */
+   .note-actions {
+     flex-direction: column; /* Stack buttons */
+     align-items: center; /* Center buttons */
+     gap: 15px;
+   }
+   .note-actions .standard-button { /* Assuming buttons have this class */
+      width: 100%;
+      max-width: 300px; /* Limit button width */
+      text-align: center;
+      justify-content: center; /* Center button content */
+      padding: 12px 15px;
+      font-size: 1rem;
+   }
+
+  /* Adjust the main 'Process' button style if it uses btn-primary */
   .btn-primary {
-    width: 280px; /* Adjust width */
-    height: 50px; /* Adjust height */
-    font-size: 15px;
+    width: 100%; /* Make full width */
+    max-width: 300px; /* Limit width */
+    height: 50px;
+    font-size: 1rem; /* Adjust font size */
   }
-  .action-container {
-    /* Adjust container if needed based on button size */
+  .action-container { /* Container for the animated button */
+     width: 100%;
+     max-width: 310px; /* Match button width + effects */
+     height: 60px; /* Match button height + effects */
   }
-  .action-white,
-  .action-border,
-  .action-darkBorderBg,
-  .action-glow {
-    /* Adjust max-height/width if needed */
-    max-height: 60px; 
-    max-width: 290px; 
-  }
+  /* Adjust effect containers */
+   .action-white,
+   .action-border,
+   .action-darkBorderBg,
+   .action-glow {
+     max-width: 100%;
+     max-height: 100%;
+   }
 
 }
 
 /* Further adjustments for very small screens */
 @media (max-width: 480px) {
   
+  /* Adjust overall content padding */
   .content-area {
-    padding: 20px 0px;
-    max-width: 100vw;
+    padding: 20px 10px; /* Add some horizontal padding */
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
-  .project-container {
-    padding: 0 10px; /* Reduce padding further */
-  }
+  /* Remove redundant project-container style */
 
-  .card {
-    padding: 3px; /* Reduce card padding */
+  .card { /* Further reduce card padding */
+    padding: 15px;
   }
 
   .card-title {
-    padding: 5px;
-    font-size: 17px; /* Smaller card titles */
+    font-size: 1rem; /* Adjust title size */
+    text-align: center; /* Center card titles */
+    padding: 0;
+    margin-bottom: 15px;
   }
 
-  .project-title,
-  .project-title-input {
-    font-size: 18px; /* Smaller project title */
+  /* Adjust note title size */
+  .note-title-input,
+  .note-title-container h2.header2 {
+    font-size: 1.4rem;
   }
 
   .textarea-container textarea,
@@ -1555,25 +1626,34 @@
   }
 
   .fine-tune-options {
-    grid-template-columns: 1fr; /* Switch fine-tune options to single column */
+    grid-template-columns: 1fr; /* Already single column */
+  }
+  /* Make image grid single column */
+  .image-thumbnail-grid {
+    grid-template-columns: 1fr; /* Single column */
+    gap: 10px;
+  }
+  .thumbnail-item.attachment-item {
+     width: 100%; /* Full width */
+     max-width: 200px; /* Limit max width */
+     margin: 0 auto; /* Center */
+  }
+  .thumbnail-image-container {
+     height: 120px; /* Increase height */
   }
 
+  /* Adjust action buttons */
+  .note-actions .standard-button,
   .btn-primary {
-    width: 100%; /* Make action button full width */
-    max-width: 280px; /* But limit max width */
-    height: 48px; 
-    font-size: 14px;
+     max-width: 280px; /* Consistent max width */
+     height: 48px;
+     font-size: 0.9rem;
   }
   .action-container {
-     width: 100%; 
-     max-width: 290px;
+     max-width: 290px; /* Match button */
+     height: 58px; /* Match button */
   }
-   .action-white,
-  .action-border,
-  .action-darkBorderBg,
-  .action-glow {
-    max-width: 100%;
-  }
+  /* Effects already set to 100% width/height */
 
   .pdf-dropzone {
     padding: 15px 10px; /* Smaller dropzone padding */
@@ -1614,87 +1694,98 @@
   /* Ensure outline items don't overflow */
   /* Assuming outline items might have a class like .outline-item-content or similar */
   /* Let's target the container first */
-  .outline-container {
-     padding: 0px; /* Reduce padding */
-     overflow: hidden; /* Prevent children from breaking out */
+  /* Adjust outline/clu containers */
+  .outline-container,
+  .clus-container {
+     padding: 10px; /* Add some padding back */
+     overflow: hidden;
   }
 
-  .outline-item {
-     padding: 3px; /* Reduce padding */
-     margin: 0px; /* Remove margin */
-     overflow: hidden; /* Prevent children from breaking out */
+  .outline-item,
+  .clu-item {
+     padding: 10px 5px; /* Adjust padding */
+     margin: 0 0 10px 0; /* Add bottom margin */
+     overflow: hidden;
+     background: rgba(255, 255, 255, 0.03); /* Slight background */
+     border-radius: 4px;
   }
 
-  .outline-children {
-    padding-left: 5px;
+  .outline-children,
+  .clu-children {
+    padding-left: 10px; /* Indent children */
   }
   /* Adjust outline item header for wrapping */
-  .outline-item-header {
-    flex-wrap: wrap; /* Allow header items to wrap */
-    gap: 5px; /* Add small gap for wrapped items */
+  .outline-item-header,
+  .clu-item-header {
+    flex-wrap: wrap;
+    gap: 8px; /* Increase gap */
+    align-items: center; /* Vertically align items */
+    margin-bottom: 8px; /* Space below header */
+    font-size: 0.9rem; /* Adjust font size */
   }
 
   /* Make title input flexible and prevent overflow */
-  .outline-item .item-title {
-    flex: 1 1 auto; /* Allow shrinking and growing */
-    min-width: 120px; /* Minimum width before shrinking further */
-    /* text-overflow: ellipsis; might not work well on input */
+  .outline-item .item-title,
+  .clu-item .clu-textarea { /* Target title input and clu textarea */
+    flex: 1 1 auto;
+    min-width: 0; /* Allow full shrinking */
+    font-size: 0.9rem; /* Adjust font size */
+    padding: 6px 8px; /* Adjust padding */
   }
 
   /* Ensure action buttons container can wrap too */
-  .outline-item .item-actions {
+  .outline-item .item-actions,
+  .clu-item .clu-item-actions { /* Target action buttons */
     flex-wrap: wrap;
-    gap: 2px; /* Smaller gap for buttons */
+    gap: 5px; /* Increase gap */
+    justify-content: flex-end; /* Align buttons right */
+    flex-shrink: 0; /* Prevent shrinking */
+  }
+  /* Make action buttons slightly larger/easier to tap */
+  .outline-item .item-actions button,
+  .clu-item .clu-item-actions button {
+     padding: 5px;
+     font-size: 1rem; /* Increase icon size */
   }
 
    /* Add wrapping for description and keywords just in case */
   .outline-item .item-description,
-  .outline-item .item-keywords {
+  .outline-item .item-keywords,
+  .clu-item .clu-item-content p { /* Target text content */
     word-wrap: break-word;
-    white-space: normal; /* Ensure wrapping */
-    font-size: 13px; /* Match other small screen fonts */
+    white-space: normal;
+    font-size: 0.85rem; /* Adjust font size */
+    line-height: 1.5; /* Improve readability */
+    margin-top: 8px; /* Add space above text */
   }
 
-  .clus-container {
-    padding: 3px; /* Reduce padding */
-  }
+/* .clus-container already adjusted */
 
-  .clu-item {
-    padding: 8px 2px; /* Reduce padding */
-    margin: 0px; /* Remove margin */
-  }
+/* .clu-item already adjusted */
  
-  .clu-children {
-    padding-left: 3px;
+/* .clu-children already adjusted */
+
+  /* Adjust practice mode controls */
+   .practice-controls {
+     padding: 10px; /* Add padding */
+     flex-direction: column; /* Stack controls */
+     align-items: center; /* Center controls */
+     gap: 10px;
+   }
+   .btn-close-practice {
+     position: static; /* Remove absolute positioning */
+     align-self: center; /* Center close button */
+     margin-top: 10px; /* Add space */
+   }
+
+  .clu-item-content { /* Adjust padding */
+    padding: 10px 5px;
+    margin: 0;
   }
 
-  .practice-controls {
-    padding: 4px; /* Reduce padding */
-  }
-
-  .btn-close-practice {
-    position: relative;
-    align-self: right;
-    top: 0;
-    right: 0;
-    margin-top: 0px;
-  }
-
-  .clu-item-content {
-    padding: 5px; /* Reduce padding */
-    margin: 0px; /* Remove margin */
-  }
-
-  .clu-textarea {
-    width: 100%;
-  }
+/* .clu-textarea already adjusted */
 
 
-  .clu-item-header {
-    position: relative;
-    font-size: 10px;
-    margin-bottom: 5px;
-    overflow-wrap: anywhere;
-  }
+/* .clu-item-header already adjusted */
 }
   

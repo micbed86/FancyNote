@@ -77,7 +77,34 @@
   display: flex;
   align-items: center;
   gap: 10px; 
+
+  @media screen and (max-width: 480px)  {
+    flex-direction: column;
+  }
+
 }
+
+.attachment-item.voice-item {
+  display: flex;
+  align-items: center;
+  gap: 10px; 
+
+  @media screen and (max-width: 768px)  {
+    flex-direction: column; 
+   }
+}
+
+.attachment-info.voice-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  @media screen and (max-width: 768px)  {
+   flex-direction: column; 
+  }
+}
+
 /* Manual Text Section */
 .manual-text-section .textarea {
   /* Assuming .textarea style is global or defined elsewhere */
@@ -108,10 +135,15 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+
+  @media screen and (max-width: 480px) {
+    flex-direction: column;
+  }
 }
 
 .attachments-section .attachments-header h3.header3 {
    margin-bottom: 0;
+   
 }
 
 .attachments-section .attachment-actions {
@@ -143,13 +175,19 @@
   padding: 10px 0;
 }
 
+.attachment-name {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
 /* Reusing attachment-item styles from item.css */
 .attachments-section .attachment-item {
   background: rgba(255, 255, 255, 0.05);
   padding: 10px 15px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
+  display: flex; flex-direction: column;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -406,3 +444,84 @@
    border: none;
 }
 /* Use standard-button styles */
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .create-note-container {
+    max-width: 100%; /* Allow full width */
+    padding: 0 15px; /* Add horizontal padding */
+  }
+
+  .card {
+    padding: 20px; /* Reduce card padding */
+  }
+
+  .manual-text-section .textarea {
+    font-size: 15px; /* Slightly smaller font */
+  }
+
+  .create-note-actions {
+    justify-content: center; /* Center buttons */
+    flex-wrap: wrap; /* Allow buttons to wrap */
+  }
+}
+
+@media (max-width: 768px) {
+  .card {
+    padding: 15px; /* Further reduce card padding */
+  }
+
+  /* Center recording controls and make button wider */
+  .recording-section .recording-controls {
+    gap: 15px; /* Adjust gap */
+    justify-content: center; /* Center items horizontally */
+    flex-direction: column; /* Stack items vertically */
+    align-items: center; /* Center items vertically in the column */
+  }
+
+  .record-button {
+    width: 100%; /* Make button wider */
+    height: 45px;
+    font-size: 14px;
+  }
+
+  .standard-audio-player {
+    min-width: 90%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+
+  .manual-text-section .textarea {
+    min-height: 120px; /* Shorter textarea */
+    font-size: 14px;
+  }
+
+  /* Allow attachment filenames to wrap */
+  .attachments-section .attachment-info span {
+    white-space: normal; /* Allow wrapping */
+    word-wrap: break-word; /* Break long words */
+    overflow: visible; /* Remove overflow hidden */
+    text-overflow: clip; /* Remove ellipsis */
+    flex-basis: calc(100% - 60px); /* Allow space for icon/button */
+  }
+
+  .attachments-section .attachment-item {
+     align-items: flex-start; /* Align top if name wraps */
+  }
+
+  .create-note-actions {
+    flex-direction: column; /* Stack buttons vertically */
+    align-items: stretch; /* Make buttons full width */
+  }
+
+  .create-note-actions .standard-button {
+     width: 100%; /* Make buttons take full width */
+     justify-content: center; /* Center text/icon in button */
+  }
+
+  .create-page-title-input {
+    font-size: 1.2rem; /* Smaller title input */
+  }
+}
