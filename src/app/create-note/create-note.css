@@ -443,7 +443,64 @@
    box-shadow: none;
    border: none;
 }
-/* Use standard-button styles */
+.standard-button {
+  padding: 12px 20px;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  border-radius: 10px;
+  text-transform: uppercase;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+  background: rgba(138, 43, 226, 0.2);
+  margin-top: 10px;
+  align-self: flex-start;
+}
+
+.standard-button:hover {
+  border-color: #8a2be2;
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+.standard-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  animation: pulse 1.5s infinite ease-in-out, shine 2s infinite linear;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes shine {
+  0% {
+    background-position: -100%;
+  }
+  100% {
+    background-position: 100%;
+  }
+}
+
+.standard-button:disabled::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shine 2s infinite linear;
+}
+
+
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {

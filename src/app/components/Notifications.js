@@ -58,6 +58,7 @@ export default function Notifications({ userId }) {
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
+        .eq('cleared', false)
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -175,10 +176,11 @@ export default function Notifications({ userId }) {
                   try {
                     await supabase
                       .from('notifications')
-                      .delete()
-                      .eq('user_id', userId);
+                      .update({ cleared: true })
+                      .eq('user_id', userId)
+                      .eq('cleared', false);
                     
-                    setNotifications([]);
+                    setNotifications(prev => prev.filter(n => !n.cleared));
                     setUnreadCount(0);
                   } catch (error) {
                     console.error('Error deleting all notifications:', error);
