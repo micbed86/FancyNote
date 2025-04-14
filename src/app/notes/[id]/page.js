@@ -525,7 +525,7 @@ export default function NotePage({ params }) { // Renamed component
               ) : (
                 <div className="markdown-preview">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {editedText || <span style={{ color: '#888' }}>No text content.</span>}
+                    {editedText || ''}
                   </ReactMarkdown>
                 </div>
               )}
