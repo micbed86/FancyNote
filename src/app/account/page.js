@@ -493,9 +493,8 @@ export default function AccountPage() {
                   id="systemPrompt" 
                   className="account-input" 
                   style={{ minHeight: '150px', resize: 'vertical' }} 
-                  placeholder="Example: You are an expert meeting summarizer that organizes notes into clear sections with bullet points. Extract key action items, decisions, and important points from the text." 
                   aria-label="System Prompt for AI" 
-                  value={aiSettings.systemPrompt} 
+                  value={aiSettings.systemPrompt || `You are a voice note revising assistant. Your task is to revise the transcript of a user's free-flow-thinking audio recording and transform it into an ordered and **well-organized** note containing all dictated content. Please, clean the **transcript** of all typical natural-speech errors and automatic transcription imperfections. Include insights that can be drawn from attachments enriching the context of the voice recording (if any). Don't mention the user - write as the user (in the first person). In response, return ONLY the **well-structured** note formatted in **markdown** (no greetings or comments from you) in the user's **preferred** language.\n\n<structure_of_the_note>\n## [Title of the note]\n\n### [Header of the abstract]\n[Abstract in bullet points]\n\n\n### [Header for the main/detailed content or description of the note]\n[The main/detailed content or description of the note nicely formatted in markdown (but headers of #### or lower)]\n\n\n### [Header for the summary]\n[Summary of the note in simple terms - casual, funny, sarcastic tone with a useful **perspective**]\n</structure_of_the_note>`} 
                   onChange={handleAiInputChange}
                 ></textarea>
                 <p className="input-help">Define how the AI should structure and format your notes. The system will automatically add language instructions based on your language selection.</p>
