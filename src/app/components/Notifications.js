@@ -12,45 +12,6 @@ export default function Notifications({ userId }) {
   const notificationRef = useRef(null);
   const router = useRouter();
 
-  // Fetch notifications when component mounts or userId changes
-  useEffect(() => {
-    if (!userId) return;
-    
-    // Initial fetch
-    fetchNotifications();
-    
-    // Set up real-time subscription for new notifications
-    const channel = supabase
-      .channel('notifications-changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`
-      }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, fetchNotifications]); // Added fetchNotifications
-
-  // Close notifications when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   // Fetch notifications from Supabase (memoized)
   const fetchNotifications = useCallback(async () => {
     if (!userId) return; // Ensure userId is available
@@ -71,6 +32,46 @@ export default function Notifications({ userId }) {
       console.error('Error fetching notifications:', error);
     }
   }, [userId]); // Dependency: userId
+
+  // Fetch notifications when component mounts or userId changes
+  useEffect(() => {
+    if (!userId) return;
+    
+    // Initial fetch
+    fetchNotifications();
+    
+    // Set up real-time subscription for new notifications
+    const channel = supabase
+      .channel('notifications-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`
+      }, () => {
+        fetchNotifications(); // Re-fetch on new notification
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, fetchNotifications]); // Dependencies: userId and the memoized fetchNotifications
+
+  // Close notifications when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []); // Empty dependency array: runs only once on mount
+
 
   // Toggle notifications panel
   const toggleNotifications = () => {
