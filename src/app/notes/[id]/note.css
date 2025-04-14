@@ -177,7 +177,11 @@
 }
 
 .note-text-container {
-  margin: 25px 25px; /* Adjust margin */ 
+  margin: 25px 25px; /* Adjust margin */
+  
+  @media screen {
+    margin: 35px 10px;
+  }
 }
 
 
@@ -241,6 +245,10 @@
     resize: vertical;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+
+    @media screen {
+      padding: 12px 5px;
+    }
   }
   .textarea.note-text-edit:focus {
     border-color: #8a2be2;
@@ -363,6 +371,21 @@
 }
 
 /* --- Attachments Section --- */
+
+.voice-recordings-section {
+  width: 100%;
+}
+
+.voice-player {
+  min-width: 50%;
+  max-width: 100%;
+  margin-top: 10px;
+  
+  @media screen and (max-width: 768px) {
+    min-width: 100%;
+  }
+}
+
 .attachments-section {
   margin-top: 20px; /* Space above attachments */
   padding-top: 20px; /* Space above attachments */
@@ -374,6 +397,11 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+
+  @media screen and (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .attachments-header h3.header3 { /* Style the header text */
@@ -383,6 +411,7 @@
 .attachment-actions { /* Container for add buttons */
   display: flex;
   gap: 10px;
+  margin-top: 15px;
 }
 
 .attachment-list {
@@ -400,17 +429,25 @@
   padding: 10px 15px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
+  display: flex; 
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+
+  @media screen and (max-width: 768px) {
+    flex-direction: column;
+  }
 }
 .attachment-info {
-  display: flex;
+  display: flex; 
   align-items: center;
   gap: 10px;
   overflow: hidden; /* Prevent long names breaking layout */
   flex-grow: 1; /* Allow info to take available space */
+
+  @media screen and (max-width: 768px) {
+    flex-direction: column;
+  }
 }
 .attachment-info i { /* File type icon */
   font-size: 1.2em;
@@ -1471,12 +1508,12 @@
 
   /* Adjust note header for mobile */
   .note-header { /* Use correct class name */
-    flex-direction: column; /* Stack title and menu */
     align-items: center; /* Center items */
     gap: 15px; /* Add gap */
     margin-bottom: 25px;
   }
   .note-title-container {
+    display:block;
     width: 100%; /* Allow title container to take full width */
     justify-content: center; /* Center title/edit icon */
   }
@@ -1498,7 +1535,7 @@
   .note-actions-menu { /* Use correct class name */
      /* Centered due to parent (.note-header) alignment */
      position: relative; /* Reset positioning if needed */
-     align-self: center; /* Explicitly center */
+     align-self: flex-end; /* Explicitly right */
   }
   .menu-toggle-button {
      font-size: 1.5rem; /* Make menu icon larger */

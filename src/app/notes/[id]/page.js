@@ -444,7 +444,7 @@ export default function NotePage({ params }) { // Renamed component
   }
 
   return (
-    <DashboardLayout pageTitle={isEditingTitle ? 'Editing Note...' : noteTitle}>
+    <DashboardLayout pageTitle="Note">
       <div className="dashboard-content item-detail-content">
         {/* Apply structure from titleUI.md */}
         {/* Structure based on titleUI.md and previous implementation */}
@@ -510,7 +510,6 @@ export default function NotePage({ params }) { // Renamed component
                 title={isEditingText ? 'Finish Editing Text' : 'Edit Text'}
               >
                 {isEditingText ? <CheckCircle /> : <EditIcon />}
-                {isEditingText ? 'Done' : 'Edit'}
               </button>
             </div>
             <div className={`note-text-container ${isEditingText ? 'editing' : ''}`}>

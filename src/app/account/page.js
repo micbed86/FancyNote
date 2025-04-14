@@ -514,7 +514,7 @@ export default function AccountPage() {
                   <option value="it">Italian</option>
                   <option value="de">German</option>
                 </select>
-                <p className="input-help">Select the language for audio transcriptions</p>
+                <p className="input-help">Select the language for your notes</p>
              </div>
              <button type="submit" className="account-btn" disabled={updating}>
                {updating ? 'Saving...' : 'Save AI Settings'}
