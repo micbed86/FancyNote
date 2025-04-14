@@ -33,7 +33,7 @@ export default function AccountPage() {
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   // Add state for AI and Storage settings if they need to be fetched/saved
   // Initialize with default structure, values loaded in useEffect
-  const [aiSettings, setAiSettings] = useState({ apiKey: '', model: null, systemPrompt: '' });
+  const [aiSettings, setAiSettings] = useState({ apiKey: '', model: null, systemPrompt: '', language: 'pl' });
   const [aiSettingsMessage, setAiSettingsMessage] = useState({ type: '', text: '' }); // Separate message state for AI settings
   // FTP State Removed
   const [projectCredits, setProjectCredits] = useState(null); // State for project credits
@@ -70,11 +70,12 @@ export default function AccountPage() {
             setAiSettings({
               apiKey: profile.ai_settings.apiKey || '',
               model: profile.ai_settings.model || null, // Store the model ID
-              systemPrompt: profile.ai_settings.systemPrompt || ''
+              systemPrompt: profile.ai_settings.systemPrompt || '',
+              language: profile.ai_settings.language || 'pl' // Default to Polish if not set
             });
           } else {
              // Set defaults if ai_settings is missing or not an object
-             setAiSettings({ apiKey: '', model: null, systemPrompt: '' });
+             setAiSettings({ apiKey: '', model: null, systemPrompt: '', language: 'pl' });
           }
           // FTP State Population Removed
           setProjectCredits(profile.project_credits ?? 0); // Set project credits state
@@ -323,6 +324,7 @@ export default function AccountPage() {
          apiKey: aiSettings.apiKey, // Update API Key from state
          systemPrompt: aiSettings.systemPrompt, // Update System Prompt from state
          model: aiSettings.model, // Ensure model from state is included (in case it was just updated)
+         language: aiSettings.language, // Include language selection
          updated_at: new Date().toISOString()
        };
        
@@ -385,6 +387,7 @@ export default function AccountPage() {
          model: selectedModelId, // Update the model ID
          apiKey: aiSettings.apiKey, // Include current API key from state
          systemPrompt: aiSettings.systemPrompt, // Include current prompt from state
+         language: aiSettings.language, // Include language selection
          updated_at: new Date().toISOString()
        };
        
@@ -442,7 +445,7 @@ export default function AccountPage() {
         <div className="tabs-container">
           <div className="tabs">
             <div className={`tab ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>Profile & Billing</div>
-            <div className={`tab ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')}>AI (LLM)</div>
+            <div className={`tab ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')}>AI</div>
             {/* FTP Tab Removed */}
             <div className={`tab ${activeTab === 'security' ? 'active' : ''}`} onClick={() => setActiveTab('security')}>Security</div>
           </div>
@@ -476,7 +479,7 @@ export default function AccountPage() {
         </div>
 
         <div className={`tab-content ${activeTab === 'ai' ? 'active' : ''}`}>
-          <h2 className="section-title">AI (LLM) Settings</h2>
+          <h2 className="section-title">AI Settings</h2>
           {/* Use dedicated AI settings message */}
           {aiSettingsMessage.text && <div className={`message ${aiSettingsMessage.type}`}>{aiSettingsMessage.text}</div>}
           <form className="account-form" onSubmit={(e) => { e.preventDefault(); saveAiSettings(); }}>
@@ -486,7 +489,32 @@ export default function AccountPage() {
              </div>
              <div className="form-group">
                 <label htmlFor="systemPrompt">System Prompt for AI Note Structuring</label>
-                <textarea id="systemPrompt" className="account-input" style={{ minHeight: '150px', resize: 'vertical' }} placeholder="Example: You are an expert meeting summarizer..." aria-label="System Prompt for AI" value={aiSettings.systemPrompt} onChange={handleAiInputChange}></textarea>
+                <textarea 
+                  id="systemPrompt" 
+                  className="account-input" 
+                  style={{ minHeight: '150px', resize: 'vertical' }} 
+                  placeholder="Example: You are an expert meeting summarizer that organizes notes into clear sections with bullet points. Extract key action items, decisions, and important points from the text." 
+                  aria-label="System Prompt for AI" 
+                  value={aiSettings.systemPrompt} 
+                  onChange={handleAiInputChange}
+                ></textarea>
+                <p className="input-help">Define how the AI should structure and format your notes. The system will automatically add language instructions based on your language selection.</p>
+             </div>
+             <div className="form-group">
+                <label htmlFor="language">Language</label>
+                <select 
+                  id="language" 
+                  className="account-input" 
+                  value={aiSettings.language} 
+                  onChange={handleAiInputChange}
+                  aria-label="Language"
+                >
+                  <option value="pl">Polish</option>
+                  <option value="en">English</option>
+                  <option value="it">Italian</option>
+                  <option value="de">German</option>
+                </select>
+                <p className="input-help">Select the language for audio transcriptions</p>
              </div>
              <button type="submit" className="account-btn" disabled={updating}>
                {updating ? 'Saving...' : 'Save AI Settings'}

@@ -4,6 +4,8 @@ import { useState, useEffect, use, useCallback, useRef } from 'react'; // Import
 import { useRouter } from 'next/navigation';
 import Image from 'next/image'; // Import Next.js Image component
 import { supabase } from '@/lib/supabase';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import DashboardLayout from '../../components/DashboardLayout';
 import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon, CheckCircle } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon, Changed CheckIcon to CheckCircle
 import './note.css'; // Renamed CSS file
@@ -511,23 +513,26 @@ export default function NotePage({ params }) { // Renamed component
                 {isEditingText ? 'Done' : 'Edit'}
               </button>
             </div>
-            {isEditingText ? (
-              <textarea
-                className="textarea note-text-edit" // Added specific class
-                value={editedText}
-                onChange={handleTextChange}
-                placeholder="Enter note content..."
-                rows={10} // Adjust as needed
-              />
-            ) : (
-              <div className="note-text-display" style={{ whiteSpace: 'pre-wrap', padding: '10px', border: '1px solid transparent' }}> {/* Added basic display styling */}
-                {editedText || <span style={{ color: '#888' }}>No text content.</span>} {/* Display editedText instead of noteText */}
-              </div>
-            )}
+            <div className={`note-text-container ${isEditingText ? 'editing' : ''}`}>
+              {isEditingText ? (
+                <textarea
+                  className="textarea note-text-edit"
+                  value={editedText}
+                  onChange={handleTextChange}
+                  placeholder="Enter note content..."
+                  rows={10}
+                />
+              ) : (
+                <div className="markdown-preview">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {editedText || <span style={{ color: '#888' }}>No text content.</span>}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Embedded Images Section */}
-          {/* TODO: Fetch and map embedded images */}
           {/* Conditionally render based on length, default open if > 0 */}
           <details className="embedded-images-section" open={noteImages.length > 0}>
             <summary>Images ({noteImages.length})</summary>

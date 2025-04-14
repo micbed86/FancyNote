@@ -7,6 +7,7 @@ import { HomeIcon, ProjectIcon, AccountIcon, LogoutIcon, BellIcon, SearchIcon, M
 import '../dashboard.css';
 import Image from 'next/image';
 import Link from 'next/link';
+import Notifications from './Notifications';
 
 export default function DashboardLayout({ children, pageTitle = 'Dashboard' }) {
   const router = useRouter();
@@ -14,11 +15,13 @@ export default function DashboardLayout({ children, pageTitle = 'Dashboard' }) {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false); // State for mobile menu
   const [userInitial, setUserInitial] = useState('U');
+  const [userId, setUserId] = useState(null);
   
   useEffect(() => {
     const fetchUserProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setUserId(user.id);
         const { data: profile } = await supabase
           .from('profiles')
           .select('first_name, last_name')
@@ -140,9 +143,7 @@ export default function DashboardLayout({ children, pageTitle = 'Dashboard' }) {
             )}
           </div>
           <div className="topbar-right">
-            <div className="notification-icon">
-              <BellIcon />
-            </div>
+            {userId && <Notifications userId={userId} />}
           </div>
         </div>
 

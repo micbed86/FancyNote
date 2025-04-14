@@ -63,15 +63,35 @@ export async function GET(request) {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        // Add recommended OpenRouter headers for leaderboard tracking
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://fancynote.up.railway.app/',
+        'X-Title': 'FancyNote App'
       }
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('OpenRouter API error:', errorData);
+      
+      // Provide more specific error messages based on status codes
+      let errorMessage;
+      switch (response.status) {
+        case 401:
+          errorMessage = 'Invalid API key or authentication error';
+          break;
+        case 403:
+          errorMessage = 'Access forbidden. Your account may not have access to this resource';
+          break;
+        case 429:
+          errorMessage = 'Rate limit exceeded. Please try again later';
+          break;
+        default:
+          errorMessage = errorData.error || `Error ${response.status}: Failed to fetch models from OpenRouter`;
+      }
+      
       return NextResponse.json(
-        { error: errorData.error || `Error ${response.status}: Failed to fetch models from OpenRouter` },
+        { error: errorMessage },
         { status: response.status }
       );
     }

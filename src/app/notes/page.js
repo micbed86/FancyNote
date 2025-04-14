@@ -84,9 +84,9 @@ export default function NotesPage() { // Renamed function
     const filtered = notes.filter(note => { // Updated variable
       const title = (note.title || 'Untitled Note').toLowerCase(); // Updated variable and default text
       const date = formatDateTime(note.created_at).toLowerCase(); // Updated variable
-      // TODO: Add filtering by content_excerpt if available
+      const excerpt = (note.text || '').toLowerCase(); // Added excerpt filtering
       
-      return title.includes(term) || date.includes(term);
+      return title.includes(term) || date.includes(term) || excerpt.includes(term);
     });
     
     setFilteredNotes(filtered); // Updated state setter

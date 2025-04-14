@@ -290,11 +290,6 @@ export default function CreateNotePage() {
     });
 
     // Append other attachments (files/images)
-    // if (audioBlob) { // This is now handled by finalVoiceRecordings
-      // Use a filename that the backend can recognize if needed, e.g., 'audio.webm'
-      // formData.append('audioBlob', audioBlob, 'audio.webm'); // This is now handled by voiceRecording_n
-    // } // Removed extra closing brace
-
     const attachmentContextFlags = [];
     attachments.forEach((item, index) => {
       // Use a different key for general attachments vs voice recordings
@@ -303,7 +298,6 @@ export default function CreateNotePage() {
     });
     // Send context flags separately if needed, or combine logic on backend
     formData.append('attachmentContextFlags', JSON.stringify(attachmentContextFlags));
-
 
     console.log('Sending data to /api/notes/process...');
 
@@ -315,26 +309,45 @@ export default function CreateNotePage() {
       }
       const accessToken = session.access_token;
 
-      const response = await fetch('/api/notes/process', {
+      // First, save the note with its attachments using the regular process endpoint
+      const saveResponse = await fetch('/api/notes/process', {
         method: 'POST',
         headers: {
-          // Send the token in the Authorization header
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: formData, // Send FormData directly
-        // No 'Content-Type' header needed for FormData; browser sets it with boundary
+        body: formData,
       });
 
-      const result = await response.json();
+      const saveResult = await saveResponse.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || `HTTP error! status: ${response.status}`);
+      if (!saveResponse.ok) {
+        throw new Error(saveResult.error || `HTTP error! status: ${saveResponse.status}`);
       }
 
-      console.log('Note processed successfully:', result);
-      // Redirect to the newly created note page
-      if (result.noteId) {
-        router.push(`/notes/${result.noteId}`);
+      console.log('Note saved successfully:', saveResult);
+      
+      // If we have a noteId, start the async processing
+      if (saveResult.noteId) {
+        // Call the async processing endpoint
+        const processResponse = await fetch('/api/notes/process-async', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ noteId: saveResult.noteId }),
+        });
+
+        if (!processResponse.ok) {
+          const processError = await processResponse.json();
+          console.error('Async processing request failed:', processError);
+          // We don't throw here as the note was already saved successfully
+        } else {
+          console.log('Async processing started successfully');
+        }
+
+        // Redirect to the newly created note page
+        router.push(`/notes/${saveResult.noteId}`);
       } else {
         // Fallback redirect if noteId is missing for some reason
         router.push('/notes');

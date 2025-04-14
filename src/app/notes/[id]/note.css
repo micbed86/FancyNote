@@ -176,6 +176,11 @@
   gap: 25px; /* Space between editor, images, attachments */
 }
 
+.note-text-container {
+  margin: 25px 25px; /* Adjust margin */ 
+}
+
+
 /* WYSIWYG Editor Styles - From Note View Container Component.md */
 .wysiwyg-editor {
   min-height: 250px; /* Increased min-height */
