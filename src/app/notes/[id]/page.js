@@ -421,6 +421,31 @@ export default function NotePage({ params }) { // Renamed component
     setEditedText(e.target.value);
   };
   // --- End Text Editing Handlers ---
+
+  // --- Share Handler ---
+  const handleShareNote = useCallback(async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: noteTitle || 'Shared Note', // Use note title or a default
+          text: noteText, // The main content to share
+          // url: window.location.href // Optionally share the note's URL
+        });
+        console.log('Note shared successfully');
+      } catch (error) {
+        console.error('Error sharing note:', error);
+        // Handle errors (e.g., user cancelled share) - maybe show a notification
+        if (error.name !== 'AbortError') {
+          alert(`Could not share note: ${error.message}`);
+        }
+      }
+    } else {
+      console.warn('Web Share API not supported in this browser.');
+      // Fallback: Maybe copy to clipboard or show a message
+      alert('Sharing is not supported on this browser/device.');
+    }
+  }, [noteText, noteTitle]); // Dependencies for useCallback
+  // --- End Share Handler ---
   
   // handleSaveChanges function is removed.
   if (loading) {
@@ -524,10 +549,9 @@ export default function NotePage({ params }) { // Renamed component
                 />
               ) : (
                 <div className="markdown-preview">
-                  <ReactMarkdown
-                    children={noteText}
-                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                  />
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                    {noteText}
+                  </ReactMarkdown>
                 </div>
               )}
             </div>
@@ -674,7 +698,7 @@ export default function NotePage({ params }) { // Renamed component
           {/* Bottom Action Buttons */}
           {/* TODO: Add functionality (Save, Share, Re-process) */}
           <div className="note-actions">
-             <button className="standard-button button-secondary" title="Share Note"><ShareIcon /> Share</button> {/* Removed disabled={isSaving} */}
+             <button onClick={handleShareNote} className="standard-button button-secondary" title="Share Note"><ShareIcon /> Share</button> {/* Removed disabled={isSaving} */}
              {/* Save Changes button removed */}
              {/* Add Re-process button if needed */}
           </div> {/* End of note-actions */}

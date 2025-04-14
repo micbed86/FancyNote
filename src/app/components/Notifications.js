@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import './Notifications.css';
@@ -35,7 +35,7 @@ export default function Notifications({ userId }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, fetchNotifications]); // Added fetchNotifications
 
   // Close notifications when clicking outside
   useEffect(() => {
@@ -51,8 +51,9 @@ export default function Notifications({ userId }) {
     };
   }, []);
 
-  // Fetch notifications from Supabase
-  const fetchNotifications = async () => {
+  // Fetch notifications from Supabase (memoized)
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) return; // Ensure userId is available
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -69,7 +70,7 @@ export default function Notifications({ userId }) {
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  };
+  }, [userId]); // Dependency: userId
 
   // Toggle notifications panel
   const toggleNotifications = () => {
