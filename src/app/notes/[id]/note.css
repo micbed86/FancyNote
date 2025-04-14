@@ -177,7 +177,7 @@
 }
 
 .note-text-container {
-  margin: 25px 25px; /* Adjust margin */
+  margin: 25px 25px;
   
   @media screen {
     margin: 35px 10px;
@@ -1556,7 +1556,7 @@
   }
   /* Center image thumbnails */
   .image-thumbnail-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Adjust size */
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); /* Adjust size */
     gap: 15px;
     justify-items: center; /* Center items in grid cells */
   }
@@ -1831,3 +1831,106 @@
 /* .clu-item-header already adjusted */
 }
   
+/* ReactMarkdown Styles */
+.note-text-container {
+  margin: 25px 25px;
+}
+
+.note-text-container p {
+  margin-bottom: 1.5em;
+  line-height: 1.6;
+}
+
+.note-text-container h1,
+.note-text-container h2,
+.note-text-container h3,
+.note-text-container h4,
+.note-text-container h5,
+.note-text-container h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.note-text-container ul,
+.note-text-container ol {
+  margin-bottom: 1.5em;
+  padding-left: 2em;
+}
+
+.note-text-container li {
+  margin-bottom: 0.5em;
+}
+
+.note-text-container blockquote {
+  margin: 1.5em 0;
+  padding-left: 1em;
+  border-left: 4px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.note-text-container pre {
+  margin: 1.5em 0;
+  padding: 1em;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.note-text-container code {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.note-text-container hr {
+  margin: 2em 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+
+/* --- Attachments Section --- */
+
+.voice-recordings-section {
+  width: 100%;
+}
+
+.voice-player {
+  min-width: 50%;
+  max-width: 100%;
+  margin-top: 10px;
+  
+  @media screen and (max-width: 768px) {
+    min-width: 100%;
+  }
+}
+
+.attachments-section {
+  margin-top: 20px; /* Space above attachments */
+  padding-top: 20px; /* Space above attachments */
+  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Separator line */
+}
+
+.attachments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+
+  @media screen and (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.attachments-header h3.header3 { /* Style the header text */
+   margin-bottom: 0; /* Remove default margin */
+}
+
+.attachment-actions { /* Container for add buttons */
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+

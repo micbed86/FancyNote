@@ -6,6 +6,7 @@ import Image from 'next/image'; // Import Next.js Image component
 import { supabase } from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import DashboardLayout from '../../components/DashboardLayout';
 import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon, CheckCircle } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon, Changed CheckIcon to CheckCircle
 import './note.css'; // Renamed CSS file
@@ -523,9 +524,10 @@ export default function NotePage({ params }) { // Renamed component
                 />
               ) : (
                 <div className="markdown-preview">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {editedText || ''}
-                  </ReactMarkdown>
+                  <ReactMarkdown
+                    children={noteText}
+                    remarkPlugins={[remarkGfm, remarkBreaks]}
+                  />
                 </div>
               )}
             </div>
