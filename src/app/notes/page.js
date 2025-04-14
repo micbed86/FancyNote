@@ -43,7 +43,7 @@ export default function NotesPage() { // Renamed function
       try {
         const { data, error } = await supabase
           .from('notes') // Changed table name
-          .select('id, title, created_at, text') // Select only needed columns for the list
+          .select('id, title, created_at, text, excerpt') // Select needed columns including excerpt
           .eq('user_id', user.id)
           .order('created_at', { ascending: false }); // Sort by creation date, newest first
           
@@ -84,7 +84,7 @@ export default function NotesPage() { // Renamed function
     const filtered = notes.filter(note => { // Updated variable
       const title = (note.title || 'Untitled Note').toLowerCase(); // Updated variable and default text
       const date = formatDateTime(note.created_at).toLowerCase(); // Updated variable
-      const excerpt = (note.text || '').toLowerCase(); // Added excerpt filtering
+      const excerpt = (note.excerpt || '').toLowerCase(); // Filter based on excerpt
       
       return title.includes(term) || date.includes(term) || excerpt.includes(term);
     });
@@ -122,7 +122,7 @@ export default function NotesPage() { // Renamed function
                 <p className="text">{note.title || 'Untitled Note'}</p>
                 <p className="note-date">{formatDateTime(note.created_at)}</p>
                 <p className="note-excerpt">
-                  {note.text || 'No content preview available...'} {/* Use 'text' column for excerpt */}
+                  {note.excerpt || 'No excerpt available...'} {/* Use 'excerpt' column */}
                 </p>
               </div>
             ))}

@@ -217,34 +217,101 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
     } else {
       console.log('No content to process with LLM');
     }
-    
-    // 3. Update the note with processed content
-    if (llmResponse) {
-      // Get current files array from note data
-      const currentFiles = noteData.files || [];
-      
-      // Add transcription files to the files array
-      const updatedFiles = [...currentFiles, ...transcriptionFiles];
-      
-      const { error: updateError } = await supabaseAdmin
-        .from('notes')
-        .update({ 
-          text: llmResponse,
-          transcripts: transcriptions.join('\n\n'),
-          files: updatedFiles, // Update files array with transcription files
-          processing_status: 'completed',
-          processed_at: new Date().toISOString()
-        })
-        .eq('id', noteId);
-      
-      if (updateError) {
-        throw new Error(`Failed to update note: ${updateError.message}`);
+
+    // Note: Title and Excerpt generation moved to AFTER the initial content update
+
+    // 3b. Update the note with processed content, title, and excerpt
+    // Prepare update payload - always update status and timestamp
+    const currentFiles = noteData.files || [];
+    const updatedFiles = [...currentFiles, ...transcriptionFiles];
+    const updatePayload = {
+      text: llmResponse || noteData.text, // Use LLM response if available, else original text
+      transcripts: transcriptions.join('\n\n'),
+      files: updatedFiles,
+      processing_status: 'completed',
+      processed_at: new Date().toISOString()
+    };
+
+    // --- Initial Update: Save core processed content ---
+    console.log(`Performing initial update for note ${noteId}`);
+    const { error: initialUpdateError } = await supabaseAdmin
+      .from('notes')
+      .update(updatePayload)
+      .eq('id', noteId);
+
+    if (initialUpdateError) {
+      throw new Error(`Failed to perform initial update for note: ${initialUpdateError.message}`);
+    }
+    console.log(`Initial update successful for note ${noteId}`);
+
+    // --- Generate Title & Excerpt using FINAL content ---
+    const contentForGroq = updatePayload.text; // Use the final text saved in the DB
+    let generatedTitle = null;
+    let generatedExcerpt = null;
+    const language = aiSettings?.language || 'en';
+    let finalTitle = noteData.title || 'New Note'; // Default final title
+
+    if (noteData.title === 'New Note' && contentForGroq) {
+        try {
+            console.log(`Generating title for note ${noteId} using final content...`);
+            generatedTitle = await generateNoteTitle(contentForGroq, language);
+            if (generatedTitle) {
+              console.log(`Generated title: ${generatedTitle}`);
+              finalTitle = generatedTitle; // Update final title if generation successful
+            } else {
+              console.log('Title generation returned null or empty.');
+            }
+        } catch (error) {
+            console.error(`Error generating title for note ${noteId}:`, error);
+        }
+    } else {
+        finalTitle = noteData.title; // Use original title if not 'New Note'
+    }
+
+
+    if (contentForGroq) {
+         try {
+            console.log(`Generating excerpt for note ${noteId} using final content...`);
+            generatedExcerpt = await generateNoteExcerpt(contentForGroq, language);
+             if (generatedExcerpt) {
+               console.log(`Generated excerpt: ${generatedExcerpt}`);
+             } else {
+               console.log('Excerpt generation returned null or empty.');
+             }
+        } catch (error) {
+            console.error(`Error generating excerpt for note ${noteId}:`, error);
+        }
+    }
+
+    // --- Second Update: Add Title and Excerpt if generated ---
+    if (generatedTitle || generatedExcerpt) {
+      const secondUpdatePayload = {};
+      if (generatedTitle) {
+        secondUpdatePayload.title = generatedTitle;
       }
-      
-      console.log(`Updated note ${noteId} with processed content`);
+      if (generatedExcerpt) {
+        secondUpdatePayload.excerpt = generatedExcerpt;
+      }
+
+      console.log(`Performing second update for note ${noteId} with title/excerpt`);
+      const { error: secondUpdateError } = await supabaseAdmin
+        .from('notes')
+        .update(secondUpdatePayload)
+        .eq('id', noteId);
+
+      if (secondUpdateError) {
+        // Log error but don't necessarily throw, as main content is saved
+        console.error(`Failed to perform second update (title/excerpt) for note ${noteId}: ${secondUpdateError.message}`);
+      } else {
+        console.log(`Second update (title/excerpt) successful for note ${noteId}`);
+      }
     }
     
     // 4. Add notification
+    // Determine the final title for the notification
+    // finalTitle is already determined above based on generation success
+
+    // Add notification
     const { error: notificationError } = await supabaseAdmin
       .from('notifications')
       .insert({
@@ -252,17 +319,17 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
         type: 'note_processed',
         content: {
           noteId: noteId,
-          title: noteData.title || 'New Note',
+          title: finalTitle, // Use the potentially updated title
           message: 'Your note has been processed successfully!'
         },
         read: false,
         created_at: new Date().toISOString()
       });
-    
+
     if (notificationError) {
       console.error('Failed to create notification:', notificationError);
     } else {
-      console.log(`Created notification for user ${userId} about note ${noteId}`);
+      console.log(`Created notification for user ${userId} about note ${noteId} with title "${finalTitle}"`);
     }
     
   } catch (error) {
@@ -290,7 +357,7 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
           type: 'note_processing_error',
           content: {
             noteId: noteId,
-            title: noteData.title || 'New Note',
+            title: noteData.title || 'New Note', // Keep original title for error notification
             message: 'There was an error processing your note.'
           },
           read: false,
@@ -310,8 +377,8 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
     } catch (cleanupError) {
       console.error('Error cleaning up temp directory:', cleanupError);
     }
-  }
-}
+  } // Close finally block
+} // Close processNoteInBackground function
 
 async function transcribeAudio(filePath, aiSettings) {
   try {
@@ -341,6 +408,111 @@ async function transcribeAudio(filePath, aiSettings) {
     console.error('Error transcribing audio with Groq API:', error);
     return `[Transcription Error: ${error.message}]`;
   }
+}
+
+// Helper function to generate note title using Groq API
+async function generateNoteTitle(content, language) {
+if (!content || !content.trim()) {
+  console.log('Skipping title generation: No content provided.');
+  return null;
+}
+
+try {
+  console.log(`Generating title with Groq for language: ${language}`);
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+  const languageNames = {
+    'en': 'English',
+    'pl': 'Polish',
+    'it': 'Italian',
+    'de': 'German'
+  };
+  const targetLanguage = languageNames[language] || 'English';
+
+  const chatCompletion = await groq.chat.completions.create({
+    messages: [
+      {
+        role: "system",
+        content: `You are Titles Creator. The user sends you a note content. As a response return ONLY (no replies, no comments) one short (up to 6 words) title in the **${targetLanguage}** language for the note.`
+      },
+      {
+        role: "user",
+        content: content
+      }
+    ],
+    model: "meta-llama/llama-4-maverick-17b-128e-instruct", // Using a standard Groq model suitable for this
+    temperature: 0.7, // Adjusted for title generation
+    max_tokens: 30, // Limit tokens for a short title
+    top_p: 1,
+    stream: false, // Get the full response at once
+    stop: null
+  });
+
+  const title = chatCompletion.choices[0]?.message?.content?.trim() || null;
+  console.log(`Groq generated title: ${title}`);
+  // Basic filter for potentially empty or placeholder responses
+  if (title && title.toLowerCase() !== 'null' && title.length > 1) {
+      // Remove potential markdown like surrounding asterisks
+      return title.replace(/^\*+|\*+$/g, '').trim();
+  }
+  return null;
+
+} catch (error) {
+  console.error('Error generating title with Groq API:', error);
+  return null; // Return null on error
+}
+}
+
+// Helper function to generate note excerpt using Groq API
+async function generateNoteExcerpt(content, language) {
+if (!content || !content.trim()) {
+  console.log('Skipping excerpt generation: No content provided.');
+  return null;
+}
+
+try {
+  console.log(`Generating excerpt with Groq for language: ${language}`);
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+  const languageNames = {
+    'en': 'English',
+    'pl': 'Polish',
+    'it': 'Italian',
+    'de': 'German'
+  };
+  const targetLanguage = languageNames[language] || 'English';
+
+  const chatCompletion = await groq.chat.completions.create({
+    messages: [
+      {
+        role: "system",
+        content: `You are Descriptions Creator. The user sends you a note content. As a response return ONLY (no replies, no comments) one short (up to 40 words) description in the **${targetLanguage}** language of what the note is about.`
+      },
+      {
+        role: "user",
+        content: content
+      }
+    ],
+    model: "meta-llama/llama-4-maverick-17b-128e-instruct", // Using a standard Groq model suitable for this
+    temperature: 0.8, // Slightly higher for descriptive text
+    max_tokens: 200, // Limit tokens for a short excerpt
+    top_p: 1,
+    stream: false, // Get the full response at once
+    stop: null
+  });
+
+  const excerpt = chatCompletion.choices[0]?.message?.content?.trim() || null;
+  console.log(`Groq generated excerpt: ${excerpt}`);
+   // Basic filter for potentially empty or placeholder responses
+  if (excerpt && excerpt.toLowerCase() !== 'null' && excerpt.length > 1) {
+      return excerpt;
+  }
+  return null;
+
+} catch (error) {
+  console.error('Error generating excerpt with Groq API:', error);
+  return null; // Return null on error
+}
 }
 
 // Helper function to validate and format model IDs according to OpenRouter standards
