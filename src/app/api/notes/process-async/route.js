@@ -666,7 +666,9 @@ async function processWithLLM(transcriptions, additionalText, fileContents, imag
     
     // More robust response handling
     if (!data.choices || !data.choices.length) {
-      throw new Error('Invalid response format from LLM API');
+      // Log the problematic response data for debugging
+      console.error('OpenRouter API response missing choices:', JSON.stringify(data, null, 2));
+      throw new Error('Invalid response format from LLM API: Missing or empty choices array');
     }
     
     return data.choices[0]?.message?.content || '';
