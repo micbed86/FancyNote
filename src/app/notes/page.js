@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
@@ -30,6 +30,78 @@ export default function NotesPage() { // Renamed function
   const [filteredNotes, setFilteredNotes] = useState([]); // Renamed state
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedNotes, setSelectedNotes] = useState(new Set()); // State for selected notes
+
+  // Function to handle checkbox change
+  const handleCheckboxChange = useCallback((noteId, isChecked) => {
+    setSelectedNotes(prevSelected => {
+      const newSelected = new Set(prevSelected);
+      if (isChecked) {
+        newSelected.add(noteId);
+      } else {
+        newSelected.delete(noteId);
+      }
+      return newSelected;
+    });
+  }, []);
+
+  // Function to handle deleting selected notes
+  const handleDeleteSelected = async () => {
+    if (selectedNotes.size === 0) return;
+
+    const confirmed = window.confirm(`Are you sure you want to delete ${selectedNotes.size} selected note(s)? This action cannot be undone.`);
+
+    if (confirmed) {
+      console.log("Attempting to delete notes:", Array.from(selectedNotes));
+      setLoading(true); // Optional: Show loading state during deletion
+
+      try {
+        // Get the current session for the token
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          throw new Error(sessionError?.message || 'Could not get user session.');
+        }
+        const token = session.access_token;
+
+        const response = await fetch('/api/notes/delete-batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ noteIds: Array.from(selectedNotes) }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error('API Error Response:', result);
+          throw new Error(result.error || `Failed to delete notes (status ${response.status})`);
+        }
+
+        console.log('Deletion successful:', result);
+        if (result.sftpErrors && result.sftpErrors.length > 0) {
+            console.warn('SFTP Deletion Warnings:', result.sftpErrors);
+            // Optionally inform the user about partial success if needed
+        }
+
+        // Update local state after successful deletion
+        const deletedIds = new Set(result.deletedNoteIds || Array.from(selectedNotes)); // Use response IDs if available
+        setNotes(prevNotes => prevNotes.filter(note => !deletedIds.has(note.id)));
+        setFilteredNotes(prevFiltered => prevFiltered.filter(note => !deletedIds.has(note.id)));
+        setSelectedNotes(new Set()); // Clear selection
+
+        // Optionally show a success message
+        // alert(`${result.deletedNoteIds?.length || selectedNotes.size} note(s) deleted successfully.`);
+
+      } catch (error) {
+        console.error('Error deleting selected notes:', error);
+        alert(`Error deleting notes: ${error.message}`);
+      } finally {
+        setLoading(false); // Hide loading state
+      }
+    }
+  };
 
   useEffect(() => {
     const checkUser = async () => {
@@ -100,7 +172,14 @@ export default function NotesPage() { // Renamed function
         {/* Header Section */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2>Your Notes</h2>
-          {/* Button removed, FAB will handle adding notes */}
+          {selectedNotes.size > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              className="delete-selected-button" // Add a class for styling
+            >
+              Delete Selected ({selectedNotes.size})
+            </button>
+          )}
         </div>
 
         {/* Conditional Content Area */}
@@ -118,12 +197,26 @@ export default function NotesPage() { // Renamed function
         ) : (
           <div className="notes-list">
             {filteredNotes.map(note => (
-              <div key={note.id} className="note-tile" onClick={() => router.push(`/notes/${note.id}`)}>
-                <p className="text">{note.title || 'Untitled Note'}</p>
-                <p className="note-date">{formatDateTime(note.created_at)}</p>
-                <p className="note-excerpt">
+              <div
+                key={note.id}
+                className={`note-tile ${selectedNotes.has(note.id) ? 'selected' : ''}`}
+                onClick={() => router.push(`/notes/${note.id}`)}
+              >
+                <input
+                  type="checkbox"
+                  className="note-select-checkbox"
+                  checked={selectedNotes.has(note.id)}
+                  onChange={(e) => handleCheckboxChange(note.id, e.target.checked)}
+                  onClick={(e) => e.stopPropagation()} // Prevent tile click when clicking checkbox
+                  aria-label={`Select note titled ${note.title || 'Untitled Note'}`}
+                />
+                <div className="note-content"> {/* Wrap content to allow checkbox positioning */}
+                  <p className="text">{note.title || 'Untitled Note'}</p>
+                  <p className="note-date">{formatDateTime(note.created_at)}</p>
+                  <p className="note-excerpt">
                   {note.excerpt || 'No excerpt available...'} {/* Use 'excerpt' column */}
-                </p>
+                  </p>
+                </div>
               </div>
             ))}
           </div>

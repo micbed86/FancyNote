@@ -54,13 +54,56 @@
   overflow: hidden; /* Prevent content overflow */
   cursor: pointer;
   transition: all 0.3s ease;
-  position: relative; /* For potential pseudo-elements or effects */
+  position: relative; /* Needed for absolute positioning of checkbox */
 }
+
+/* Checkbox Styles */
+.note-select-checkbox {
+  /* Add padding around checkbox to increase clickable area */
+  padding: 5px;
+  margin: -5px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  cursor: pointer;
+  width: 14px; /* Adjust size as needed */
+  height: 14px;
+  z-index: 2; /* Ensure checkbox is above content */
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: rgba(30, 30, 30, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+/* Checkbox checked state */
+.note-select-checkbox:checked {
+  background-color: #9100ff;
+  border-color: rgba(145, 0, 255, 0.5);
+}
+
+/* Keep content separate for checkbox positioning */
+.note-content {
+  /* Inherit flex properties or set as needed if tile layout changes */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%; /* Ensure it fills the tile */
+}
+
 
 .note-tile:hover {
   border-color: rgba(138, 43, 226, 0.5); /* Accent color border */
   box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(138, 43, 226, 0.2); /* Enhanced shadow + glow */
-  transform: translateY(-2px); /* Slight lift effect */
+  transform: translateY(0px); /* Slight lift effect */
+}
+
+/* Selected Note Tile Style - Apply hover styles persistently */
+.note-tile.selected {
+  border-color: rgba(138, 43, 226, 0.7); /* Stronger accent color border */
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(138, 43, 226, 0.3); /* Slightly stronger glow */
+  transform: translateY(-2px); /* Keep the lift effect */
+  background: rgba(40, 40, 40, 0.7); /* Slightly different background */
 }
 
 .text {
@@ -236,3 +279,29 @@
 .action-container:hover > .action-glow::before { transform: translate(-50%, -50%) rotate(240deg); }
 .action-container:hover > .action-white::before { transform: translate(-50%, -50%) rotate(263deg); }
 .action-container:hover > .action-border::before { transform: translate(-50%, -50%) rotate(250deg); }
+
+/* Delete Selected Button Style */
+.delete-selected-button {
+  padding: 8px 15px; /* Smaller padding than standard */
+  font-size: 14px;
+  border: 1px solid rgba(255, 80, 80, 0.5); /* Reddish border */
+  color: #ffcccc; /* Light red text */
+  background: rgba(255, 0, 0, 0.1); /* Transparent red background */
+  cursor: pointer;
+  border-radius: 8px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  margin-left: 15px; /* Space from the title */
+}
+
+.delete-selected-button:hover {
+  border-color: #ff5050; /* Brighter red border */
+  background: rgba(255, 0, 0, 0.2);
+  box-shadow: 0 0 10px rgba(255, 80, 80, 0.3);
+  color: #ffffff;
+}
+
+.delete-selected-button:active {
+  box-shadow: 0 0 5px rgba(255, 80, 80, 0.2);
+  transform: scale(0.98);
+}

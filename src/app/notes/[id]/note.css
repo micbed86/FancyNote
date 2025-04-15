@@ -170,17 +170,22 @@
 }
 
 /* Main Content Area Wrapper */
+
 .note-content-area {
   display: flex;
   flex-direction: column;
   gap: 25px; /* Space between editor, images, attachments */
 }
 
+.text-content-section {
+  padding: 5px; 
+}
+
 .note-text-container {
   margin: 25px 25px;
   
-  @media screen {
-    margin: 35px 10px;
+  @media screen and (max-width: 768px){
+    margin: 35px 5px;
   }
 }
 
@@ -1832,13 +1837,14 @@
 }
   
 /* ReactMarkdown Styles */
-.note-text-container {
-  margin: 25px 25px;
-}
 
 .note-text-container p {
   margin-bottom: 1.5em;
   line-height: 1.6;
+  
+  @media screen {
+    font-size: 12px;
+  }
 }
 
 .note-text-container h1,
@@ -1855,10 +1861,19 @@
 .note-text-container ol {
   margin-bottom: 1.5em;
   padding-left: 2em;
+  
+  @media screen and (max-width: 768px) {
+    font-size: 12px;
+  }
 }
 
 .note-text-container li {
   margin-bottom: 0.5em;
+
+
+  @media screen and (max-width: 768px) {
+    font-size: 12px;
+  }
 }
 
 .note-text-container blockquote {
@@ -1866,6 +1881,10 @@
   padding-left: 1em;
   border-left: 4px solid rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.7);
+  
+  @media screen and (max-width: 768px) {
+    font-size: 12px;
+  }
 }
 
 .note-text-container pre {
@@ -1874,6 +1893,10 @@
   background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
   overflow-x: auto;
+  
+  @media screen and (max-width: 768px) {
+    font-size: 12px;
+  }
 }
 
 .note-text-container code {
@@ -1881,6 +1904,10 @@
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-size: 0.9em;
+
+  @media screen and (max-width: 768px) {
+    font-size: 12px;
+  }
 }
 
 .note-text-container hr {
