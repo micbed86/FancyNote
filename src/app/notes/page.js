@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
-import { /* AddProjectIcon, */ MicrophoneIcon } from '@/lib/icons'; // Import Mic icon for FAB
+import { /* AddProjectIcon, */ MicrophoneIcon, HourglassIcon } from '@/lib/icons'; // Import Mic icon for FAB and Hourglass
 import './notes.css'; // Renamed CSS file
 import Image from 'next/image';
 
@@ -115,7 +115,7 @@ export default function NotesPage() { // Renamed function
       try {
         const { data, error } = await supabase
           .from('notes') // Changed table name
-          .select('id, title, created_at, text, excerpt') // Select needed columns including excerpt
+          .select('id, title, created_at, text, excerpt, processing_status') // Select needed columns including excerpt AND processing_status
           .eq('user_id', user.id)
           .order('created_at', { ascending: false }); // Sort by creation date, newest first
           
@@ -196,29 +196,38 @@ export default function NotesPage() { // Renamed function
           </div>
         ) : (
           <div className="notes-list">
-            {filteredNotes.map(note => (
-              <div
-                key={note.id}
-                className={`note-tile ${selectedNotes.has(note.id) ? 'selected' : ''}`}
-                onClick={() => router.push(`/notes/${note.id}`)}
-              >
-                <input
-                  type="checkbox"
-                  className="note-select-checkbox"
-                  checked={selectedNotes.has(note.id)}
-                  onChange={(e) => handleCheckboxChange(note.id, e.target.checked)}
-                  onClick={(e) => e.stopPropagation()} // Prevent tile click when clicking checkbox
-                  aria-label={`Select note titled ${note.title || 'Untitled Note'}`}
-                />
-                <div className="note-content"> {/* Wrap content to allow checkbox positioning */}
-                  <p className="text">{note.title || 'Untitled Note'}</p>
-                  <p className="note-date">{formatDateTime(note.created_at)}</p>
-                  <p className="note-excerpt">
-                  {note.excerpt || 'No excerpt available...'} {/* Use 'excerpt' column */}
-                  </p>
+            {filteredNotes.map(note => {
+              const isProcessing = note.processing_status === 'processing'; // Check if the note is processing using processing_status
+              return (
+                <div
+                  key={note.id}
+                  className={`note-tile ${selectedNotes.has(note.id) ? 'selected' : ''} ${isProcessing ? 'processing' : ''}`}
+                  onClick={isProcessing ? undefined : () => router.push(`/notes/${note.id}`)} // Disable click if processing
+                  style={isProcessing ? { cursor: 'not-allowed', opacity: 0.7 } : {}} // Add visual cues for processing
+                >
+                  {!isProcessing && (
+                    <input
+                      type="checkbox"
+                      className="note-select-checkbox"
+                      checked={selectedNotes.has(note.id)}
+                      onChange={(e) => handleCheckboxChange(note.id, e.target.checked)}
+                      onClick={(e) => e.stopPropagation()} // Prevent tile click when clicking checkbox
+                      aria-label={`Select note titled ${note.title || 'Untitled Note'}`}
+                    />
+                  )}
+                  <div className="note-content"> {/* Wrap content to allow checkbox positioning */}
+                    <p className="text">
+                      {isProcessing && <HourglassIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />} {/* Add icon if processing */}
+                      {note.title || (isProcessing ? 'Processing Note...' : 'Untitled Note')}
+                    </p>
+                    <p className="note-date">{formatDateTime(note.created_at)}</p>
+                    <p className="note-excerpt">
+                    {isProcessing ? 'Transcription and analysis in progress...' : (note.excerpt || 'No excerpt available...')}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

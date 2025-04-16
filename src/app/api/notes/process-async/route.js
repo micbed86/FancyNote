@@ -228,7 +228,7 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
       text: llmResponse || noteData.text, // Use LLM response if available, else original text
       transcripts: transcriptions.join('\n\n'),
       files: updatedFiles,
-      processing_status: 'completed',
+      processing_status: 'ready', // Update status to ready
       processed_at: new Date().toISOString()
     };
 
@@ -629,51 +629,89 @@ async function processWithLLM(transcriptions, additionalText, fileContents, imag
       });
     }
     
-    // Prepare the request payload
-    const payload = {
-      // Format model ID according to OpenRouter standards
-      model: validateModelId(aiSettings.model) || 'deepseek/deepseek-r1-zero:free',
-      messages: messages,
-      // Optional parameters for better control
-      temperature: 0.7,  // Default temperature for balanced creativity/determinism
-      max_tokens: 4000,   // Ensure we get a complete response
-      top_p: 0.9         // Nucleus sampling for more focused responses
-    };
-    
-    // Log the full payload for debugging purposes
-    console.log('OpenRouter API Payload:', JSON.stringify(payload, null, 2));
-    
-    // Call OpenRouter API
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${aiSettings.apiKey || process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        // Add recommended OpenRouter headers for leaderboard tracking
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://fancynote.up.railway.app/',
-        'X-Title': 'FancyNote App'
-      },
-      body: JSON.stringify(payload)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('OpenRouter API error details:', errorData);
-      throw new Error(`LLM API error: ${errorData.error || response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // More robust response handling
-    if (!data.choices || !data.choices.length) {
-      // Log the problematic response data for debugging
-      console.error('OpenRouter API response missing choices:', JSON.stringify(data, null, 2));
-      throw new Error('Invalid response format from LLM API: Missing or empty choices array');
-    }
-    
-    return data.choices[0]?.message?.content || '';
+    // Define models with fallbacks
+    const primaryModel = validateModelId(aiSettings.model) || 'google/gemini-2.5-pro-exp-03-25:free'; // Use logged model as default
+    const fallbackModels = [
+      'google/gemini-2.0-flash-thinking-exp:free',
+      'google/gemini-2.0-flash-lite-001'
+    ];
+    const modelsToTry = [primaryModel, ...fallbackModels];
+
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      // Prepare the request payload for the current model
+      const payload = {
+        model: model,
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 4000,
+        top_p: 0.9
+      };
+
+      console.log(`Attempting LLM processing with model: ${model}`);
+      // Log the full payload for debugging purposes
+      // console.log('OpenRouter API Payload:', JSON.stringify(payload, null, 2)); // Keep commented unless debugging needed
+
+      try {
+        // Call OpenRouter API
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${aiSettings.apiKey || process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://fancynote.up.railway.app/',
+            'X-Title': 'FancyNote App'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // More robust response handling
+          if (data.choices && data.choices.length > 0 && data.choices[0]?.message?.content) {
+            console.log(`Successfully processed with model: ${model}`);
+            return data.choices[0].message.content; // Success! Return the content.
+          } else {
+            // Log the problematic response data for debugging
+            console.error(`OpenRouter API response missing choices or content for model ${model}:`, JSON.stringify(data, null, 2));
+            lastError = new Error(`Invalid response format from LLM API (model: ${model}): Missing or empty choices/content`);
+            // Continue to next model if format is invalid, might be a temporary model issue
+            continue;
+          }
+        } else {
+          // Handle specific errors
+          const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
+          console.error(`OpenRouter API error (model: ${model}, status: ${response.status}):`, errorData);
+          lastError = new Error(`LLM API error (model: ${model}): ${errorData.error?.message || response.statusText}`);
+
+          // If it's a quota error (429), try the next model
+          if (response.status === 429) {
+            console.warn(`Quota exceeded for model ${model}. Trying next model...`);
+            continue; // Go to the next iteration of the loop
+          } else {
+            // For other errors, stop trying and throw
+            throw lastError;
+          }
+        }
+      } catch (fetchError) {
+        // Catch network errors or errors during fetch/json parsing
+        console.error(`Fetch error during LLM processing (model: ${model}):`, fetchError);
+        lastError = fetchError; // Store the error
+        // Decide if we should retry or fail immediately. For now, let's retry on general fetch errors.
+        // If it was the last model, the loop will end and the error will be thrown below.
+        continue;
+      }
+    } // End of model loop
+
+    // If the loop finished without returning, all models failed.
+    console.error('All LLM models failed.', lastError);
+    throw lastError || new Error('All LLM models failed to process the request.');
+
   } catch (error) {
+    // Catch errors from outside the loop (e.g., initial setup errors) or re-thrown errors
     console.error('Error processing with LLM:', error);
+    // Return a user-friendly error message embedded in the text field
     return `[LLM Processing Error: ${error.message}]\n\nOriginal content was formatted according to the specified schema.`;
   }
 }

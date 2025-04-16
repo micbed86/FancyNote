@@ -346,8 +346,8 @@ export default function CreateNotePage() {
           console.log('Async processing started successfully');
         }
 
-        // Redirect to the newly created note page
-        router.push(`/notes/${saveResult.noteId}`);
+        // Redirect to the notes list page
+        router.push('/notes');
       } else {
         // Fallback redirect if noteId is missing for some reason
         router.push('/notes');

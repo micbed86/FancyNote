@@ -33,7 +33,13 @@ export default function AccountPage() {
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   // Add state for AI and Storage settings if they need to be fetched/saved
   // Initialize with default structure, values loaded in useEffect
-  const [aiSettings, setAiSettings] = useState({ apiKey: '', model: null, systemPrompt: '', language: 'pl' });
+  const defaultSystemPrompt = `You are a voice note revising assistant. Your task is to revise the transcript of a user's free-flow-thinking audio recording and transform it into an ordered and **well-organized** note containing all dictated content. Please, clean the **transcript** of all typical natural-speech errors and automatic transcription imperfections. Include insights that can be drawn from attachments enriching the context of the voice recording (if any). Don't mention the user - write as the user (in the first person). In response, return ONLY the **well-structured** note formatted in **markdown** (no greetings or comments from you) in the user's **preferred** language.\n\n<structure_of_the_note>\n## [Title of the note]\n\n### [Header of the abstract]\n[Abstract in bullet points]\n\n\n### [Header for the main/detailed content or description of the note]\n[The main/detailed content or description of the note nicely formatted in markdown (but headers of #### or lower)]\n\n\n### [Header for the summary]\n[Summary of the note in simple terms - casual, funny, sarcastic tone with a useful **perspective**]\n</structure_of_the_note>`;
+  const [aiSettings, setAiSettings] = useState({
+    apiKey: '',
+    model: null,
+    systemPrompt: '', // Initialize as empty, default applied later if needed
+    language: 'pl'
+  });
   const [aiSettingsMessage, setAiSettingsMessage] = useState({ type: '', text: '' }); // Separate message state for AI settings
   // FTP State Removed
   const [projectCredits, setProjectCredits] = useState(null); // State for project credits
@@ -52,8 +58,8 @@ export default function AccountPage() {
         // Get user profile data
         const { data: profile } = await supabase
           .from('profiles')
-          // Select ftp_settings JSONB column
-          .select('*, project_credits, ftp_settings, ai_settings')
+          // Select all profile columns including JSONB ones
+          .select('*')
           .eq('id', user.id)
           .single();
 
@@ -67,15 +73,23 @@ export default function AccountPage() {
           });
           // Correctly load from ai_settings JSONB column
           if (profile.ai_settings && typeof profile.ai_settings === 'object') {
-            setAiSettings({
+            const loadedSettings = {
               apiKey: profile.ai_settings.apiKey || '',
               model: profile.ai_settings.model || null, // Store the model ID
+              // Load prompt if exists, otherwise keep initial empty (default applied in textarea if needed)
               systemPrompt: profile.ai_settings.systemPrompt || '',
               language: profile.ai_settings.language || 'pl' // Default to Polish if not set
-            });
+            };
+            setAiSettings(loadedSettings);
           } else {
              // Set defaults if ai_settings is missing or not an object
-             setAiSettings({ apiKey: '', model: null, systemPrompt: '', language: 'pl' });
+             const defaultSettings = {
+               apiKey: '',
+               model: null,
+               systemPrompt: '', // Keep empty initially
+               language: 'pl'
+             };
+             setAiSettings(defaultSettings);
           }
           // FTP State Population Removed
           setProjectCredits(profile.project_credits ?? 0); // Set project credits state
@@ -297,56 +311,68 @@ export default function AccountPage() {
 
   // FTP Handlers Removed (handleFtpSettingsChange, saveFtpSettings, testFtpConnection)
 
-  // Function to save API Key and System Prompt (triggered by the main save button)
+  // Function to save API Key, System Prompt, and Language (triggered by the main save button)
   const saveAiSettings = async () => {
     setUpdating(true);
-    setAiSettingsMessage({ type: '', text: '' }); // Use dedicated message state
-    console.log('Saving AI Key & Prompt:', { apiKey: aiSettings.apiKey, systemPrompt: aiSettings.systemPrompt });
+    setAiSettingsMessage({ type: '', text: '' });
+    
+    // Log the state values being saved
+    console.log('Attempting to save AI Settings:', {
+      apiKey: aiSettings.apiKey,
+      systemPrompt: aiSettings.systemPrompt,
+      language: aiSettings.language
+    });
 
     try {
-      // Fetch current settings to merge, ensuring model ID isn't overwritten
-       const { data: currentProfile, error: fetchError } = await supabase
-         .from('profiles')
-         .select('ai_settings')
-         .eq('id', user.id)
-         .single();
+      // Fetch current settings ONLY to merge them with the fields being updated
+      const { data: currentProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('ai_settings')
+        .eq('id', user.id)
+        .single();
 
-       if (fetchError) {
-          console.error("Error fetching current profile before saving AI settings:", fetchError);
-          throw new Error('Could not fetch current settings before saving.');
-       }
+      if (fetchError && fetchError.code !== 'PGRST116') { // Ignore 'not found' error if profile/settings don't exist yet
+         console.error("Error fetching current profile before saving AI settings:", fetchError);
+         throw new Error('Could not fetch current settings before saving.');
+      }
 
-       const currentDbSettings = currentProfile?.ai_settings || {};
+      const currentDbSettings = currentProfile?.ai_settings || {};
 
-       // Prepare the update object, preserving the model ID from DB/state
-       const settingsToUpdate = {
-         ...currentDbSettings, // Start with existing settings from DB
-         apiKey: aiSettings.apiKey, // Update API Key from state
-         systemPrompt: aiSettings.systemPrompt, // Update System Prompt from state
-         model: aiSettings.model, // Ensure model from state is included (in case it was just updated)
-         language: aiSettings.language, // Include language selection
-         updated_at: new Date().toISOString()
-       };
-       
-       // Remove updated_at if it already exists in currentDbSettings to avoid nested objects if structure is wrong
-       if (currentDbSettings.updated_at) {
-          delete settingsToUpdate.updated_at; // Remove old one before adding new
-          settingsToUpdate.updated_at = new Date().toISOString();
-       }
+      // Prepare the update object: merge existing settings with ONLY the fields from this form
+      const settingsToUpdate = {
+        ...currentDbSettings, // Keep existing settings (like model)
+        apiKey: aiSettings.apiKey, // Update API Key from state
+        systemPrompt: aiSettings.systemPrompt, // Update System Prompt from state
+        language: aiSettings.language, // Update language from state
+        updated_at: new Date().toISOString() // Update timestamp
+      };
+      
+      // Ensure nested updated_at is handled correctly if it exists
+      if (settingsToUpdate.ai_settings && settingsToUpdate.ai_settings.updated_at) {
+         delete settingsToUpdate.ai_settings.updated_at;
+      }
+      if (currentDbSettings.updated_at) {
+         delete settingsToUpdate.updated_at; // Remove potentially nested old one
+         settingsToUpdate.updated_at = new Date().toISOString(); // Add top-level one
+      }
 
 
       const { error } = await supabase
         .from('profiles')
         .update({
-          ai_settings: settingsToUpdate
+          ai_settings: settingsToUpdate // Update the whole JSONB column
         })
         .eq('id', user.id);
 
-      if (error) throw error;
-      setAiSettingsMessage({ type: 'success', text: 'API Key and System Prompt saved!' });
-      setTimeout(() => setAiSettingsMessage({ type: '', text: '' }), 3000); // Clear message
+      if (error) {
+        console.error("Supabase update error:", error); // Log Supabase error
+        throw error;
+      }
+      
+      setAiSettingsMessage({ type: 'success', text: 'AI settings saved successfully!' });
+      setTimeout(() => setAiSettingsMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      setAiSettingsMessage({ type: 'error', text: 'Failed to save API Key/System Prompt.' });
+      setAiSettingsMessage({ type: 'error', text: 'Failed to save AI settings.' });
       console.error('Error saving AI settings:', error);
     } finally {
       setUpdating(false);
@@ -355,65 +381,66 @@ export default function AccountPage() {
 
   // Function to handle auto-saving model selection from AiModelsCard
   const handleModelUpdate = async (selectedModelId) => {
-     console.log('Model selected in child, updating parent state and saving:', selectedModelId);
-     // Optimistically update local state first
+     console.log('Model selected, attempting to save:', selectedModelId);
+     // Update local state immediately for responsiveness
      setAiSettings(prev => ({ ...prev, model: selectedModelId }));
      
-     // Use a temporary updating state specific to model saving? Or reuse general 'updating'?
-     // For simplicity, let's reuse 'updating' for now, but ideally, it would be separate.
+     // Indicate loading specifically for this action if possible, else use general updating
      setUpdating(true);
-     setAiSettingsMessage({ type: '', text: '' }); // Clear previous messages
+     setAiSettingsMessage({ type: '', text: '' });
 
      try {
-       // Fetch current settings to merge, ensuring other fields aren't overwritten
+       // Fetch current settings to merge ONLY the model ID
        const { data: currentProfile, error: fetchError } = await supabase
          .from('profiles')
          .select('ai_settings')
          .eq('id', user.id)
          .single();
 
-       if (fetchError) {
+       // Handle case where profile or ai_settings might not exist yet
+       if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = row not found, which is okay if we're creating settings
           console.error("Error fetching current profile before saving model:", fetchError);
-          // Revert optimistic update? Or show error?
-          setAiSettings(prev => ({ ...prev, model: currentProfile?.ai_settings?.model || null })); // Revert if possible
+          // Optionally revert optimistic update:
+          // setAiSettings(prev => ({ ...prev, model: currentProfile?.ai_settings?.model || null }));
           throw new Error('Could not fetch current settings before saving model.');
        }
 
        const currentDbSettings = currentProfile?.ai_settings || {};
        
-       // Prepare the update object
+       // Prepare the update object: merge existing settings with ONLY the new model ID
        const settingsToUpdate = {
-         ...currentDbSettings,
-         model: selectedModelId, // Update the model ID
-         apiKey: aiSettings.apiKey, // Include current API key from state
-         systemPrompt: aiSettings.systemPrompt, // Include current prompt from state
-         language: aiSettings.language, // Include language selection
-         updated_at: new Date().toISOString()
+         ...currentDbSettings, // Keep existing apiKey, systemPrompt, language etc.
+         model: selectedModelId, // Update ONLY the model ID
+         updated_at: new Date().toISOString() // Update timestamp
        };
-       
-       // Remove updated_at if it already exists
-       if (currentDbSettings.updated_at) {
-          delete settingsToUpdate.updated_at;
-          settingsToUpdate.updated_at = new Date().toISOString();
-       }
 
+       // Ensure nested updated_at is handled correctly
+       if (settingsToUpdate.ai_settings && settingsToUpdate.ai_settings.updated_at) {
+          delete settingsToUpdate.ai_settings.updated_at;
+       }
+       if (currentDbSettings.updated_at) {
+          delete settingsToUpdate.updated_at; // Remove potentially nested old one
+          settingsToUpdate.updated_at = new Date().toISOString(); // Add top-level one
+       }
 
        const { error } = await supabase
          .from('profiles')
-         .update({ ai_settings: settingsToUpdate })
+         .update({ ai_settings: settingsToUpdate }) // Update the whole JSONB column
          .eq('id', user.id);
 
        if (error) throw error;
+       
        setAiSettingsMessage({ type: 'success', text: 'Model selection saved!' });
-       setTimeout(() => setAiSettingsMessage({ type: '', text: '' }), 3000); // Clear message
+       setTimeout(() => setAiSettingsMessage({ type: '', text: '' }), 3000);
 
      } catch (error) {
        setAiSettingsMessage({ type: 'error', text: 'Failed to save model selection.' });
        console.error('Error saving model selection:', error);
        // Optionally revert local state if save fails
-       // setAiSettings(prev => ({ ...prev, model: currentProfile?.ai_settings?.model || null }));
+       // const originalModel = currentProfile?.ai_settings?.model || null;
+       // setAiSettings(prev => ({ ...prev, model: originalModel }));
      } finally {
-       setUpdating(false); // Reset general updating state
+       setUpdating(false);
      }
   };
 
@@ -489,15 +516,16 @@ export default function AccountPage() {
              </div>
              <div className="form-group">
                 <label htmlFor="systemPrompt">System Prompt for AI Note Structuring</label>
-                <textarea 
-                  id="systemPrompt" 
-                  className="account-input" 
-                  style={{ minHeight: '150px', resize: 'vertical' }} 
-                  aria-label="System Prompt for AI" 
-                  value={aiSettings.systemPrompt || `You are a voice note revising assistant. Your task is to revise the transcript of a user's free-flow-thinking audio recording and transform it into an ordered and **well-organized** note containing all dictated content. Please, clean the **transcript** of all typical natural-speech errors and automatic transcription imperfections. Include insights that can be drawn from attachments enriching the context of the voice recording (if any). Don't mention the user - write as the user (in the first person). In response, return ONLY the **well-structured** note formatted in **markdown** (no greetings or comments from you) in the user's **preferred** language.\n\n<structure_of_the_note>\n## [Title of the note]\n\n### [Header of the abstract]\n[Abstract in bullet points]\n\n\n### [Header for the main/detailed content or description of the note]\n[The main/detailed content or description of the note nicely formatted in markdown (but headers of #### or lower)]\n\n\n### [Header for the summary]\n[Summary of the note in simple terms - casual, funny, sarcastic tone with a useful **perspective**]\n</structure_of_the_note>`} 
+                <textarea
+                  id="systemPrompt"
+                  className="account-input"
+                  style={{ minHeight: '150px', resize: 'vertical' }}
+                  aria-label="System Prompt for AI"
+                  placeholder={defaultSystemPrompt} // Use placeholder for the default text
+                  value={aiSettings.systemPrompt} // Bind value directly to state
                   onChange={handleAiInputChange}
                 ></textarea>
-                <p className="input-help">Define how the AI should structure and format your notes. The system will automatically add language instructions based on your language selection.</p>
+                <p className="input-help">Define how the AI should structure and format your notes. Leave empty to use the default prompt shown as placeholder text. The system will automatically add language instructions based on your language selection.</p>
              </div>
              <div className="form-group">
                 <label htmlFor="language">Language</label>

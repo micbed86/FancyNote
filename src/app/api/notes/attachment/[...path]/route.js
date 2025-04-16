@@ -39,7 +39,7 @@ export async function GET(request, { params }) {
 
   try {
     // 1. Extract and reconstruct the requested relative path
-    const pathSegments = params.path; // e.g., ['USER_ID', 'images', 'filename.jpg']
+    const pathSegments = await params.path; // e.g., ['USER_ID', 'images', 'filename.jpg'] - Await added based on error
     if (!pathSegments || pathSegments.length === 0) {
       return new NextResponse('Bad Request: Missing file path', { status: 400 });
     }

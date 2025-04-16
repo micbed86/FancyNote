@@ -146,6 +146,7 @@ export async function POST(request) {
       // title: '', // To be added later or generated
       // summary: '', // To be added later
       // raw_llm_response: {}, // To be added later
+      processing_status: 'processing', // Set initial status using correct column name
     };
 
     // 6. Save Note to Supabase
