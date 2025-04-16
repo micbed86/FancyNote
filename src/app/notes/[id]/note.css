@@ -498,7 +498,7 @@
   padding-top: 20px; /* Space above buttons */
   border-top: 1px solid rgba(255, 255, 255, 0.1); /* Separator line */
 }
-/* Use standard-button styles defined elsewhere or copy here if needed */
+/* .standard-button styles are now defined globally in globals.css */
 
 /* Card Styles (Can be used for sections within content area if needed) */
 .card {
@@ -1842,7 +1842,7 @@
   margin-bottom: 1.5em;
   line-height: 1.6;
   
-  @media screen {
+  @media screen and (max-width: 768px) {
     font-size: 12px;
   }
 }
