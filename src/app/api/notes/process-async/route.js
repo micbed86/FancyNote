@@ -389,7 +389,7 @@ async function transcribeAudio(filePath, aiSettings) {
       apiKey: process.env.GROQ_API_KEY,
     });
     
-    console.log('Using Groq API for transcription with whisper-large-v3-turbo model');
+    console.log('Using Groq API for transcription with whisper-large-v3');
     
     // Create a readable stream from the file using standard fs module (not fs/promises)
     const fileStream = fsStandard.createReadStream(filePath);
@@ -397,7 +397,7 @@ async function transcribeAudio(filePath, aiSettings) {
     // Call Groq API for transcription
     const transcription = await groq.audio.transcriptions.create({
       file: fileStream,
-      model: "whisper-large-v3-turbo",
+      model: "whisper-large-v3",
       // Detect language automatically, or use a specific language if provided in settings
       language: aiSettings?.language || "pl"
     });

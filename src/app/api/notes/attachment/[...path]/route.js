@@ -74,15 +74,20 @@ export async function GET(request, { params }) {
     const readableStream = await sftpClient.createReadStream(fullSftpPath);
 
     // 5. Determine Content-Type
-    const contentType = getMimeType(fullSftpPath);
+    let contentType = getMimeType(fullSftpPath);
+    
+    // Ensure UTF-8 for text files
+    if (contentType === 'text/plain') {
+      contentType += '; charset=utf-8';
+    }
 
     // 6. Stream the response back to the client
     // Use Node.js ReadableStream directly with NextResponse
     const response = new NextResponse(readableStream);
-    response.headers.set('Content-Type', contentType);
+    response.headers.set('Content-Type', contentType); // Use the potentially modified contentType
     response.headers.set('Content-Length', fileStat.size.toString());
     // Optional: Add Content-Disposition for downloads (useful for non-image/audio files)
-    // if (!contentType.startsWith('image/') && !contentType.startsWith('audio/')) {
+    // if (!contentType.startsWith('image/') && !contentType.startsWith('audio/') && !contentType.startsWith('text/')) {
     //    response.headers.set('Content-Disposition', `attachment; filename="${path.basename(fullSftpPath)}"`);
     // }
 
