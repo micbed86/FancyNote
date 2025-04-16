@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react'; // Import useCallback
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
@@ -103,34 +103,54 @@ export default function NotesPage() { // Renamed function
     }
   };
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/auth');
+  // Function to fetch notes
+  const fetchNotes = useCallback(async (isInitialLoad = false) => {
+    if (isInitialLoad) setLoading(true);
+    console.log("Fetching notes..."); // Log when fetching starts
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error("User not found or error fetching user:", userError);
+        router.push('/auth'); // Redirect if user fetch fails
         return;
       }
-      
-      // Fetch notes for the current user
-      try {
-        const { data, error } = await supabase
-          .from('notes') // Changed table name
-          .select('id, title, created_at, text, excerpt, processing_status') // Select needed columns including excerpt AND processing_status
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false }); // Sort by creation date, newest first
-          
-        if (error) throw error;
-        setNotes(data || []); // Updated state setter
-        setFilteredNotes(data || []); // Updated state setter
-      } catch (error) {
-        // Log the raw error object for more details if possible
-        console.error('Error loading notes:', JSON.stringify(error, null, 2));
-      } finally {
-        setLoading(false);
+
+      const { data, error } = await supabase
+        .from('notes')
+        .select('id, title, created_at, text, excerpt, processing_status')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log("Notes fetched successfully:", data?.length); // Log count
+      setNotes(data || []);
+      // Apply search filter immediately after fetching if searchTerm exists
+      if (searchTerm.trim()) {
+          const term = searchTerm.toLowerCase();
+          const filtered = (data || []).filter(note => {
+              const title = (note.title || 'Untitled Note').toLowerCase();
+              const date = formatDateTime(note.created_at).toLowerCase();
+              const excerpt = (note.excerpt || '').toLowerCase();
+              return title.includes(term) || date.includes(term) || excerpt.includes(term);
+          });
+          setFilteredNotes(filtered);
+      } else {
+          setFilteredNotes(data || []); // If no search term, show all fetched notes
       }
-    };
-    checkUser();
-  }, [router]);
+
+    } catch (error) {
+      console.error('Error loading notes:', JSON.stringify(error, null, 2));
+      // Optionally set an error state here
+    } finally {
+      if (isInitialLoad) setLoading(false);
+    }
+  }, [router, searchTerm]); // Include searchTerm dependency for filtering logic
+
+  // Initial fetch on component mount
+  useEffect(() => {
+    fetchNotes(true); // Pass true for initial load
+  }, [fetchNotes]); // Depend on fetchNotes callback
   
   // Listen for note search events from the DashboardLayout
   useEffect(() => {
@@ -162,8 +182,22 @@ export default function NotesPage() { // Renamed function
     });
     
     setFilteredNotes(filtered); // Updated state setter
-  }, [searchTerm, notes]); // Updated dependency
+  }, [searchTerm, notes]);
  
+  // Polling mechanism to refresh notes periodically
+  useEffect(() => {
+    console.log("Setting up notes polling interval (15 seconds)...");
+    const intervalId = setInterval(() => {
+      fetchNotes(); // Fetch notes without setting loading state
+    }, 15000); // Poll every 15 seconds
+
+    // Cleanup function to clear the interval when the component unmounts
+    return () => {
+      console.log("Clearing notes polling interval.");
+      clearInterval(intervalId);
+    };
+  }, [fetchNotes]); // Depend on fetchNotes callback
+
   // Remove the temporary handleAddNote_TEMP function as it's replaced by FAB navigation
 
   return (
