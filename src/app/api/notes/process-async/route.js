@@ -274,7 +274,7 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
       text: llmResponse || noteData.text, // Use LLM response if available, else original text
       transcripts: transcriptions.join('\n\n'),
       files: updatedFiles,
-      processing_status: 'ready', // Update status to ready
+      processing_status: 'completed', // Update status to completed
       processed_at: new Date().toISOString()
     };
 
