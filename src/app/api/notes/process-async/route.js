@@ -110,105 +110,151 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
   const fileContents = [];
   const transcriptionFiles = []; // Array to store transcription file information
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fancynote-'));
-  
+  let recordingIndex = 1; // Initialize recording index for transcriptions
+  let fileIndex = 1; // Initialize file index for text attachments
+
   try {
     console.log(`Starting background processing for note ${noteId}`);
-    
+
+    // Connect to SFTP once if needed for recordings or files
+    const needsSftp = (noteData.voice && noteData.voice.some(r => r.includeInContext !== false)) || 
+                      (noteData.files && noteData.files.some(f => f.includeInContext));
+    if (needsSftp) {
+      sftpClient = await sftpService.connect();
+    }
+    const sftpBasePath = process.env.SFTP_BASE_PATH;
+
     // 1. Process voice recordings for transcription
     if (noteData.voice && noteData.voice.length > 0) {
       console.log(`Processing ${noteData.voice.length} voice recordings`);
-      
-      // Connect to SFTP
-      sftpClient = await sftpService.connect();
-      const sftpBasePath = process.env.SFTP_BASE_PATH;
-      
-      // Process each voice recording
-      let recordingIndex = 1;
       for (const recording of noteData.voice) {
-        // Only process recordings that have includeInContext flag set to true or undefined (for backward compatibility)
+        // Only process recordings that have includeInContext flag set to true or undefined
         if (recording.includeInContext !== false) {
           const remotePath = posixPath.join(sftpBasePath, recording.path);
           const localPath = path.join(tempDir, path.basename(recording.path));
-          
+
           // Download the file
           console.log(`Downloading voice recording from ${remotePath}`);
           await sftpClient.fastGet(remotePath, localPath);
-          
-          // Transcribe using qroq API
+
+          // Transcribe using Groq API
           const transcription = await transcribeAudio(localPath, aiSettings);
-          transcriptions.push(transcription);
-          
+          transcriptions.push(transcription); // Keep raw transcriptions if needed elsewhere
+
           // Store transcription with metadata for formatted message
           transcriptionsWithMetadata.push({
             index: recordingIndex,
             content: transcription
           });
-          recordingIndex++;
-          
+
           // Save transcription to a text file on SFTP
           const transcriptionFileName = `${path.basename(recording.path, path.extname(recording.path))}.txt`;
           const transcriptionPath = posixPath.join(userId, 'transcriptions', transcriptionFileName);
           const remoteTranscriptionPath = posixPath.join(sftpBasePath, transcriptionPath);
-          
+
           // Ensure directory exists
           await sftpService.ensureDirExists(sftpClient, posixPath.dirname(remoteTranscriptionPath));
-          
+
           // Upload transcription file
           await sftpClient.put(Buffer.from(transcription), remoteTranscriptionPath);
           console.log(`Saved transcription to ${remoteTranscriptionPath}`);
-          
+
           // Store the transcription file info to add as an attachment later
           const transcriptionFileInfo = {
             path: transcriptionPath,
             name: transcriptionFileName,
             size: Buffer.from(transcription).length,
-            includeInContext: true
+            includeInContext: true // Transcriptions are usually included by default
           };
           transcriptionFiles.push(transcriptionFileInfo);
+
+          recordingIndex++; // Increment index for the next transcription
         }
       }
     }
-    
-    // 2. Process file attachments (read content of non-image files)
+
+    // 2. Process file attachments (read content of non-image/non-audio files, transcribe included audio)
     if (noteData.files && noteData.files.length > 0) {
       console.log(`Processing ${noteData.files.length} file attachments`);
-      
-      // Connect to SFTP if not already connected
-      if (!sftpClient) {
-        sftpClient = await sftpService.connect();
-      }
-      const sftpBasePath = process.env.SFTP_BASE_PATH;
-      
-      // Process each file attachment
-      let fileIndex = 1;
+      const audioExtensions = ['.mp3', '.wav', '.m4a', '.ogg', '.aac', '.opus', '.flac']; // Add more as needed
+
       for (const file of noteData.files) {
         // Only process files that have includeInContext flag set to true
         if (file.includeInContext) {
+          const fileExt = path.extname(file.name).toLowerCase();
+          const isAudio = audioExtensions.includes(fileExt);
+
           const remotePath = posixPath.join(sftpBasePath, file.path);
           const localPath = path.join(tempDir, path.basename(file.path));
-          
+
           try {
-            // Download the file
-            console.log(`Downloading file attachment from ${remotePath}`);
+            // Download the file first
+            console.log(`Downloading attachment from ${remotePath}`);
             await sftpClient.fastGet(remotePath, localPath);
-            
-            // Read file content
-            const fileContent = await fs.readFile(localPath, 'utf8');
-            
-            // Store file content with metadata for formatted message
+
+            if (isAudio) {
+              // --- Process as Audio Recording --- 
+              console.log(`Processing audio attachment: ${file.name}`);
+              const transcription = await transcribeAudio(localPath, aiSettings);
+              transcriptions.push(transcription); // Add to raw transcriptions
+
+              // Add to formatted transcriptions for LLM
+              transcriptionsWithMetadata.push({
+                index: recordingIndex,
+                content: transcription
+              });
+
+              // Save transcription file to SFTP (optional, but consistent)
+              const transcriptionFileName = `${path.basename(file.path, path.extname(file.path))}.txt`;
+              const transcriptionPath = posixPath.join(userId, 'transcriptions', transcriptionFileName);
+              const remoteTranscriptionPath = posixPath.join(sftpBasePath, transcriptionPath);
+              await sftpService.ensureDirExists(sftpClient, posixPath.dirname(remoteTranscriptionPath));
+              await sftpClient.put(Buffer.from(transcription), remoteTranscriptionPath);
+              console.log(`Saved audio attachment transcription to ${remoteTranscriptionPath}`);
+              transcriptionFiles.push({
+                path: transcriptionPath,
+                name: transcriptionFileName,
+                size: Buffer.from(transcription).length,
+                includeInContext: true
+              });
+
+              recordingIndex++; // Increment transcription index
+
+            } else {
+              // --- Process as Standard Text Attachment --- 
+              console.log(`Processing text attachment: ${file.name}`);
+              // Read file content (assuming text-based)
+              // Add error handling for binary files if necessary
+              let fileContent = '';
+              try {
+                 fileContent = await fs.readFile(localPath, 'utf8');
+              } catch (readError) {
+                  console.warn(`Could not read file ${file.name} as UTF-8 text. Skipping content. Error: ${readError.message}`);
+                  fileContent = `[Could not read content of file: ${file.name}]`;
+              }
+              
+              // Store file content with metadata for formatted message
+              fileContents.push({
+                index: fileIndex,
+                name: file.name,
+                content: fileContent
+              });
+              fileIndex++; // Increment text file index
+            }
+          } catch (error) {
+            console.error(`Error processing file attachment ${file.name}:`, error);
+            // Optionally add an error placeholder to fileContents
             fileContents.push({
               index: fileIndex,
               name: file.name,
-              content: fileContent
+              content: `[Error processing attachment: ${error.message}]`
             });
             fileIndex++;
-          } catch (error) {
-            console.error(`Error processing file attachment ${file.name}:`, error);
           }
         }
       }
     }
-    
+
     // 3. Process with LLM
     let llmResponse = '';
     if (transcriptionsWithMetadata.length > 0 || noteData.text || fileContents.length > 0 || (noteData.images && noteData.images.some(img => img.includeInContext))) {
