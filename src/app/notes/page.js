@@ -284,3 +284,48 @@ export default function NotesPage() { // Renamed function
     </DashboardLayout>
   );
 }
+
+
+// Function to mark a note as completed and deduct credits
+const markNoteAsCompleted = async (noteId) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Fetch current credits
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('project_credits')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) throw new Error('Failed to fetch user profile');
+
+    if (profile.project_credits <= 0) {
+      alert('Insufficient credits to complete this note.');
+      return;
+    }
+
+    // Deduct one credit
+    const newCredits = profile.project_credits - 1;
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ project_credits: newCredits })
+      .eq('id', user.id);
+
+    if (updateError) throw new Error('Failed to update credits');
+
+    // Mark note as completed
+    const { error: noteError } = await supabase
+      .from('notes')
+      .update({ status: 'completed' })
+      .eq('id', noteId);
+
+    if (noteError) throw new Error('Failed to mark note as completed');
+
+    alert('Note marked as completed and credit deducted.');
+  } catch (error) {
+    console.error('Error completing note:', error);
+    alert(`Error: ${error.message}`);
+  }
+};

@@ -353,6 +353,30 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
       }
     }
     
+    // --- Update User Credits ---
+    const { data: currentProfile, error: currentProfileError } = await supabaseAdmin
+      .from('profiles')
+      .select('project_credits')
+      .eq('id', userId)
+      .single();
+    
+    if (currentProfileError) {
+      console.error('Failed to fetch current project credits:', currentProfileError);
+    } else {
+      const newCredits = (currentProfile.project_credits || 0) - 1;
+      const { error: creditUpdateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ project_credits: newCredits })
+        .eq('id', userId);
+    
+      if (creditUpdateError) {
+        console.error('Failed to update user credits:', creditUpdateError);
+      } else {
+        console.log(`User credits updated for user ${userId}`);
+      }
+    }
+    // --- End Update User Credits ---
+
     // 4. Add notification
     // Determine the final title for the notification
     // finalTitle is already determined above based on generation success
