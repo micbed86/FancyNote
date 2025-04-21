@@ -88,9 +88,9 @@ export default function BillingCard({ projectCredits, onCreditsUpdate }) {
       <h2 className="section-title">Billing &amp; Usage</h2>
 
       <div className="billing-info">
-         <h3 className="text-lg font-semibold mb-2">Project Credits</h3>
+         <h3 className="text-lg font-semibold mb-2">Notes Credits</h3>
          <p className="credits-value">{projectCredits ?? 'Loading...'}</p>
-         <p className="credits-label">Remaining items you can create</p>
+         <p className="credits-label">Remaining notes you can create</p>
       </div>
 
       <div className="voucher-section">

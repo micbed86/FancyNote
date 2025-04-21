@@ -28,6 +28,51 @@ export default function CreateNotePage() {
   const [processError, setProcessError] = useState(''); // State for processing errors
   const cameraInputRef = useRef(null); // Ref for the hidden camera input
   const initialStartDoneRef = useRef(false); // Ref to track initial auto-start
+  const [isLoadingCredits, setIsLoadingCredits] = useState(true); // State to manage loading during credit check
+
+  // --- Credit Check Effect ---
+  useEffect(() => {
+    const checkCreditsAndRedirect = async () => {
+      setIsLoadingCredits(true);
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          console.error('User not authenticated, redirecting to auth.');
+          router.push('/auth');
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('project_credits')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching user profile:', profileError);
+          // Decide how to handle profile fetch error - maybe allow access or show error?
+          // For now, let's allow access but log the error.
+        } else if (profile && profile.project_credits === 0) {
+          console.log('User has 0 credits, redirecting to notes page.');
+          alert('You have no credits remaining. Please top up to create new notes.'); // Optional: Inform user
+          router.push('/notes');
+          return; // Stop further execution in this component if redirected
+        }
+        // If credits > 0 or profile fetch failed (and we allow access), continue loading the page.
+        console.log('User has credits or profile fetch failed, allowing access.');
+
+      } catch (error) {
+        console.error('Unexpected error during credit check:', error);
+        // Handle unexpected errors, maybe redirect or show a generic error message
+      } finally {
+        setIsLoadingCredits(false); // Finished credit check
+      }
+    };
+
+    checkCreditsAndRedirect();
+  }, [router]); // Dependency on router
+  // --- End Credit Check Effect ---
 
   const handleAddFile = (event) => {
     const newFiles = Array.from(event.target.files);
@@ -361,6 +406,18 @@ export default function CreateNotePage() {
     }
   };
 
+  // Render loading state while checking credits
+  if (isLoadingCredits) {
+    return (
+      <DashboardLayout pageTitle="Create New Note">
+        <div className="loading-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <p>Checking your credits...</p> {/* Or use a spinner component */}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Render the main component content only if not loading and credits are sufficient
   return (
     <DashboardLayout pageTitle="Create New Note">
       <div className="create-note-container"> {/* Use a specific container class */}
