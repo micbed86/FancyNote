@@ -57,7 +57,7 @@ export default function AuthPage() {
 
   return (
     <div className="auth-container">
-      <h2>CLU System</h2>
+      <h2>FancyNote</h2>
       <div className="auth-toggle">
         <button className={`toggle-btn ${isLogin ? 'active' : ''}`} onClick={() => setIsLogin(true)}>
           Login
