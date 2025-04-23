@@ -1,0 +1,247 @@
+/* Chat Window Styling - Glassmorphic Dark Theme */
+
+.chat-window {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 400px;
+  height: 500px;
+  background: rgba(30, 30, 30, 0.6); /* Dark semi-transparent background */
+  backdrop-filter: blur(12px); /* Glassmorphism effect */
+  -webkit-backdrop-filter: blur(12px); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+  border-radius: 16px; /* Rounded corners consistent with .account-section */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); /* Consistent shadow */
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  color: #f0f0f0; /* Light text color */
+  overflow: hidden;
+}
+
+.chat-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  /* Slightly darker/less transparent topbar */
+  background: rgba(20, 20, 20, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: bold;
+  cursor: grab; /* Indicate draggable potential */
+}
+
+.chat-topbar:active {
+    cursor: grabbing;
+}
+
+.chat-minimize-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f0f0f0;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.chat-minimize-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.chat-minimize-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* Space between messages */
+  /* Custom scrollbar for dark theme */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Webkit scrollbar styles */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+
+.chat-message {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  word-wrap: break-word;
+  line-height: 1.5;
+  border: 1px solid transparent; /* Base border */
+}
+
+.chat-message.user {
+  /* Use a subtle gradient or slightly different background */
+  background: rgba(0, 123, 255, 0.15); /* Example: Blue tint */
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  color: #e0e0e0;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message.assistant {
+  background: rgba(255, 255, 255, 0.08); /* Slightly lighter than main background */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f0f0f0;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-message.loading {
+  font-style: italic;
+  color: #a0a0a0; /* Dimmer color for loading */
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chat-message p {
+  margin: 0;
+}
+
+.chat-message strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.9em;
+  opacity: 0.8;
+  font-weight: 600;
+}
+
+.chat-input-area {
+  display: flex;
+  align-items: center; /* Align items vertically */
+  padding: 10px 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 20, 20, 0.7); /* Match topbar background */
+}
+
+.chat-input-area textarea {
+  flex-grow: 1;
+  margin: 0 10px;
+  padding: 10px 15px;
+  border-radius: 18px; /* More rounded */
+  resize: none;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.4;
+  max-height: 80px;
+  overflow-y: auto;
+  /* Adapt .account-input styles */
+  color: white;
+  background: rgba(10, 10, 10, 0.5); /* Darker input background */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  outline: none;
+  transition: all 0.3s ease;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+.chat-input-area textarea::-webkit-scrollbar {
+  width: 5px;
+}
+.chat-input-area textarea::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.chat-input-area textarea:focus {
+  border-color: #8a2be2; /* Purple focus like account inputs */
+  box-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
+  background: rgba(10, 10, 10, 0.7);
+}
+
+.chat-input-area textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.chat-action-btn {
+  background: none;
+  border: 1px solid transparent; /* Add border for hover effect consistency */
+  cursor: pointer;
+  padding: 8px; /* Slightly larger padding */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b0b0b0; /* Default icon color */
+  border-radius: 50%; /* Circular buttons */
+  transition: all 0.2s ease;
+}
+
+.chat-action-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.chat-action-btn:hover:not(:disabled) {
+  color: #f0f0f0;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Specific color for Send button when active */
+.chat-action-btn[type="submit"]:not(:disabled) {
+   color: #8a2be2; /* Purple send icon */
+}
+.chat-action-btn[type="submit"]:hover:not(:disabled) {
+   color: #a040ff; /* Lighter purple on hover */
+   background-color: rgba(138, 43, 226, 0.1);
+   border-color: rgba(138, 43, 226, 0.3);
+}
+
+
+.chat-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Chat FAB Button - Ensure consistency */
+.chat-fab-button {
+  position: fixed;
+  bottom: 30px;
+  right: 110px; /* Adjust as needed relative to main FAB */
+  width: 40px;
+  height: 40px;
+  /* Use theme colors/styles */
+  background: linear-gradient(135deg, #8a2be2, #007bff); /* Example gradient */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 999;
+  color: #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.chat-fab-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.4); /* Purple glow on hover */
+}
+
+.chat-fab-button svg {
+  width: 20px;
+  height: 20px;
+}

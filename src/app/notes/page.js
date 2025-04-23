@@ -4,23 +4,25 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
-import { /* AddProjectIcon, */ MicrophoneIcon, HourglassIcon } from '@/lib/icons'; // Import Mic icon for FAB and Hourglass
+import ChatWindow from '../components/ChatWindow'; // Import ChatWindow
+import { /* AddProjectIcon, */ MicrophoneIcon, HourglassIcon, ChatIcon } from '@/lib/icons'; // Import Mic, Hourglass, and Chat icons
 import './notes.css'; // Renamed CSS file
+import '../components/ChatWindow.css'; // Import ChatWindow CSS
 import Image from 'next/image';
 
 // Helper function to format date and time as DD/MM/YYYY - HH:mm
 const formatDateTime = (dateString) => {
   const date = new Date(dateString);
-  
+
   // Format date as DD/MM/YYYY
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
-  
+
   // Format time as HH:mm
   const hours = date.getHours().toString().padStart(2, '0');
   const minutes = date.getMinutes().toString().padStart(2, '0');
-  
+
   return `${day}/${month}/${year} - ${hours}:${minutes}`;
 };
 
@@ -31,6 +33,11 @@ export default function NotesPage() { // Renamed function
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedNotes, setSelectedNotes] = useState(new Set()); // State for selected notes
+  const [isChatOpen, setIsChatOpen] = useState(false); // State for chat window visibility
+  // Removed userLanguage state - handled server-side via profile settings
+
+  // Function to toggle chat window
+  const toggleChat = () => setIsChatOpen(!isChatOpen);
 
   // Function to handle checkbox change
   const handleCheckboxChange = useCallback((noteId, isChecked) => {
@@ -150,53 +157,44 @@ export default function NotesPage() { // Renamed function
   // Initial fetch on component mount
   useEffect(() => {
     fetchNotes(true); // Pass true for initial load
+    // Removed fetchUserLanguage call
   }, [fetchNotes]); // Depend on fetchNotes callback
-  
+
+  // Removed fetchUserLanguage function
+
   // Listen for note search events from the DashboardLayout
   useEffect(() => {
     const handleSearch = (event) => {
       setSearchTerm(event.detail);
     };
-    
+
     window.addEventListener('noteSearch', handleSearch); // Changed event name
-    
+
     return () => {
       window.removeEventListener('noteSearch', handleSearch); // Changed event name
     };
   }, []);
-  
+
   // Filter notes based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredNotes(notes); // Updated state setter and variable
       return;
     }
-    
+
     const term = searchTerm.toLowerCase();
     const filtered = notes.filter(note => { // Updated variable
       const title = (note.title || 'Untitled Note').toLowerCase(); // Updated variable and default text
       const date = formatDateTime(note.created_at).toLowerCase(); // Updated variable
       const excerpt = (note.excerpt || '').toLowerCase(); // Filter based on excerpt
-      
+
       return title.includes(term) || date.includes(term) || excerpt.includes(term);
     });
-    
+
     setFilteredNotes(filtered); // Updated state setter
   }, [searchTerm, notes]);
- 
-  // Polling mechanism to refresh notes periodically
-  useEffect(() => {
-    console.log("Setting up notes polling interval (15 seconds)...");
-    const intervalId = setInterval(() => {
-      fetchNotes(); // Fetch notes without setting loading state
-    }, 15000); // Poll every 15 seconds
 
-    // Cleanup function to clear the interval when the component unmounts
-    return () => {
-      console.log("Clearing notes polling interval.");
-      clearInterval(intervalId);
-    };
-  }, [fetchNotes]); // Depend on fetchNotes callback
+  // Removed unnecessary polling mechanism
 
   // Remove the temporary handleAddNote_TEMP function as it's replaced by FAB navigation
 
@@ -281,6 +279,25 @@ export default function NotesPage() { // Renamed function
         </div>
 
       </div> {/* End of dashboard-content */}
+
+      {/* Chat Floating Action Button (FAB) - Moved outside dashboard-content */}
+      <button
+        className="chat-fab-button"
+        onClick={toggleChat}
+        title="Chat with Notes"
+        aria-label="Open chat with notes"
+      >
+        <ChatIcon />
+      </button>
+
+      {/* Render Chat Window - Moved outside dashboard-content */}
+      <ChatWindow
+        isOpen={isChatOpen}
+        onClose={toggleChat} // Pass toggle function to handle minimize/close
+        selectedNoteIds={selectedNotes}
+        allNotes={notes} // Pass the full notes array (API fetches full text based on IDs)
+        // Removed language prop - handled server-side
+      />
     </DashboardLayout>
   );
 }
