@@ -5,9 +5,9 @@ import OpenAI from 'openai'; // Import standard OpenAI package
 // Removed @supabase/ssr and cookies imports
 
 // Define the models and fallbacks
-const primaryModel = 'deepseek/deepseek-chat-v3-0324:free';
+const primaryModel = 'google/gemini-2.0-flash-exp:free';
 const fallbackModels = [
-  'google/gemini-2.0-flash-exp:free',
+  'deepseek/deepseek-chat-v3-0324:free',
   'meta-llama/llama-4-maverick:free',
   'deepseek/deepseek-v3-base:free',
   'google/gemma-3-27b-it:free',
@@ -63,7 +63,7 @@ function constructSystemPrompt(notes, language) {
       .join('\n\n');
   }
 
-  return `You are a helpful assistant named Bob, speaking ${langName}. Your task is to help the user by diligently answering in ${langName} to the user's questions. Your answers MUST be based **solely and exclusively** on the content of the **<notes>** provided below:
+  return `You are a helpful assistant named Bob, speaking ${langName}. Your task is to help the user by diligently answering in ${langName} to the user's questions, and formatting them as markdown text. Your answers MUST be based **solely and exclusively** on the content of the **<notes>** provided below:
 
 <notes>
 ${notesContent}

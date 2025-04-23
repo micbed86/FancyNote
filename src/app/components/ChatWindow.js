@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'; // Added useState, useCallback
-// Removed useChat import
+import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
+import remarkGfm from 'remark-gfm'; // Import GFM plugin
+import remarkBreaks from 'remark-breaks'; // Import breaks plugin
 import { supabase } from '@/lib/supabase'; // Import client-side Supabase
 import './ChatWindow.css';
 import { SendIcon, NewChatIcon, MinimizeIcon } from '@/lib/icons';
@@ -163,7 +165,18 @@ export default function ChatWindow({
         {chatMessages.map((msg) => (
           // Use generated id as key
           <div key={msg.id} className={`chat-message ${msg.role}`}>
-            <p><strong>{msg.role === 'user' ? 'You' : 'Bob'}:</strong> {msg.content}</p>
+            <p><strong>{msg.role === 'user' ? 'You' : 'Bob'}:</strong></p>
+            {msg.role === 'user' ? (
+              <div className="message-content">{msg.content}</div>
+            ) : (
+              <div className="message-content markdown-content"> {/* Apply classes to wrapper div */}
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkBreaks]} // Enable GFM and line breaks
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
+            )}
           </div>
         ))}
         {/* Use our manual isLoading state */}
