@@ -164,36 +164,39 @@ export async function POST(req) {
     // 7. Call OpenRouter API (Non-Streaming)
     // TODO: Implement fallback logic if needed (try primary, then fallbacks on error)
     console.log(`Attempting non-streaming chat completion with primary model: ${primaryModel}`);
-    try {
-      const completion = await openrouter.chat.completions.create({
-        model: primaryModel,
-        messages: preparedMessages,
-        stream: false, // Explicitly set stream to false
-      });
-
-      // Extract the content from the first choice's message
-      const responseContent = completion.choices?.[0]?.message?.content;
-
-      if (!responseContent) {
-        console.error('No content found in OpenRouter response:', completion);
-        return NextResponse.json({ error: 'No content received from AI model.' }, { status: 500 });
+    let responseContent = null;
+    let modelUsed = primaryModel;
+    let lastApiError = null;
+    for (const model of [primaryModel, ...fallbackModels]) {
+      try {
+        const completion = await openrouter.chat.completions.create({
+          model,
+          messages: preparedMessages,
+          stream: false, // Explicitly set stream to false
+        });
+        responseContent = completion.choices?.[0]?.message?.content;
+        modelUsed = model;
+        if (responseContent) {
+          break;
+        } else {
+          console.error(`No content found in OpenRouter response for model ${model}:`, completion);
+          lastApiError = new Error('No content received from AI model.');
+        }
+      } catch (apiError) {
+        console.error(`Error calling OpenRouter model ${model}:`, apiError);
+        lastApiError = apiError;
       }
-
-      // 8. Return the full response content as JSON
-      console.log("Received full response from model.");
-      return NextResponse.json({ response: responseContent });
-
-    } catch (apiError) {
-      // Handle potential errors from the API call itself
-      console.error(`Error calling OpenRouter model ${primaryModel}:`, apiError);
-      // TODO: Implement fallback model logic here if desired
-      return NextResponse.json({ error: `Failed to get response from AI model ${primaryModel}. Error: ${apiError.message}` }, { status: 500 });
     }
+    if (!responseContent) {
+      const errorMsg = lastApiError?.message || 'No content received from AI model.';
+      return NextResponse.json({ error: `Failed to get response from AI models. Last error: ${errorMsg}` }, { status: 500 });
+    }
+    // 8. Return the full response content as JSON
+    console.log(`Received full response from model: ${modelUsed}`);
+    return NextResponse.json({ response: responseContent, modelUsed });
 
-  } catch (error) {
-    console.error('Error in /api/notes/chat:', error);
-    return NextResponse.json({ error: error.message || 'An internal server error occurred' }, { status: 500 });
+    } catch (error) {
+      console.error('Error in /api/notes/chat:', error);
+      return NextResponse.json({ error: error.message || 'An internal server error occurred' }, { status: 500 });
+    }
   }
-}
-
-// Removed streaming-specific fallback notes. Fallback for non-streaming would involve catching errors above.
