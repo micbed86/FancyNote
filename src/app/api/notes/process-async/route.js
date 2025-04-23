@@ -645,7 +645,7 @@ async function processWithLLM(transcriptions, additionalText, fileContents, imag
         'it': 'Italian',
         'de': 'German'
       };
-      systemPrompt += `\n\nCrucially, since the user has selected **${languageNames[language] || 'English'}** as their preferred language, you MUST always generate your responses in ${languageNames[language] || 'English'} *regardless* of the language of provided instructions and of the source materials.`;
+      systemPrompt += `\n\nCrucially, since the user has selected **${languageNames[language] || 'English'}** as their preferred language, you MUST always generate your responses in ${languageNames[language] || 'English'} *regardless* of the language of provided instructions and *regardless* of the language of the user's content, transcription or attachments.`;
     }
     
     // Prepare the messages array
