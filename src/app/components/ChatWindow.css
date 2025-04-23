@@ -222,13 +222,17 @@
 
 /* Chat FAB Button - Ensure consistency */
 .chat-fab-button {
-  position: fixed;
-  bottom: 30px;
-  right: 110px; /* Adjust as needed relative to main FAB */
+  position: fixed; /* Keep button fixed */
+  bottom: 35px; /* Adjust vertical position */
+  left: calc(50% + 50px);
+  z-index: 100; /* Ensure it's above other content */
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 40px;
   height: 40px;
   /* Use theme colors/styles */
-  background: linear-gradient(135deg, #8a2be2, #007bff); /* Example gradient */
+  background: linear-gradient(135deg, #2f2d32, #38424c); /* Example gradient */
   border-radius: 50%;
   display: flex;
   align-items: center;
