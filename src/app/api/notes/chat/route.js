@@ -63,7 +63,7 @@ function constructSystemPrompt(notes, language) {
       .join('\n\n');
   }
 
-  return `You are a helpful assistant named Bob, speaking ${langName}. Your task is to help the user by diligently answering in ${langName} to the user's questions, and formatting them as markdown text. Your answers MUST be based **solely and exclusively** on the content of the **<notes>** provided below:
+  return `You are a helpful assistant named Bob, speaking ${langName}. Your task is to help the user by diligently answering the user's questions in ${langName}, and formatting them as markdown text. Your answers MUST be based *solely and exclusively* on the content of the user's *<notes>* provided below:
 
 <notes>
 ${notesContent}
