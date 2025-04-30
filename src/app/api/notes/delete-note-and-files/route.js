@@ -119,7 +119,30 @@ export async function POST(request) {
             }
           }
         }
-        console.log(`[API delete-note-and-files] SFTP: Finished deleting files for note ${noteId}. Errors encountered: ${sftpErrors.length}`);
+        console.log(`[API delete-note-and-files] SFTP: Finished deleting individual files for note ${noteId}. Errors encountered: ${sftpErrors.length}`);
+
+        // --- Attempt to delete the note-specific backup directory ---
+        const noteBackupDirPath = posixPath.join(sftpBasePath, 'note_backups', userId, noteId);
+        try {
+          // Check if the directory exists before attempting to delete
+          const dirExists = await sftpClient.exists(noteBackupDirPath);
+          if (dirExists === 'd') { // Ensure it's a directory
+             console.log(`[API delete-note-and-files] SFTP: Attempting to remove backup directory: ${noteBackupDirPath}`);
+             // Use rmdir with recursive option (true)
+             await sftpClient.rmdir(noteBackupDirPath, true);
+             console.log(`[API delete-note-and-files] SFTP: Successfully removed backup directory: ${noteBackupDirPath}`);
+          } else if (dirExists) {
+             console.warn(`[API delete-note-and-files] SFTP: Path exists but is not a directory, cannot remove: ${noteBackupDirPath}`);
+             sftpErrors.push(`Path exists but is not a directory: ${noteBackupDirPath}`);
+          } else {
+             console.log(`[API delete-note-and-files] SFTP: Backup directory not found, skipping removal: ${noteBackupDirPath}`);
+          }
+        } catch (rmdirError) {
+          console.error(`[API delete-note-and-files] SFTP: Error removing backup directory ${noteBackupDirPath}:`, rmdirError);
+          sftpErrors.push(`Failed to remove backup directory ${noteBackupDirPath}: ${rmdirError.message}`);
+        }
+        // --- End backup directory deletion ---
+
       } catch (connectError) {
           console.error("[API delete-note-and-files] SFTP: Failed to connect:", connectError);
           // If we can't connect, we can't delete files. Should we stop the whole process?

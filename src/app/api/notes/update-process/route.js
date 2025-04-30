@@ -401,7 +401,7 @@ ${currentNoteText}
     const mergedVoice = [...(currentNote.voice || []), ...newUploadedFilePaths.voice];
 
     const updateData = {
-      title: noteTitle, // Use the potentially updated title from form
+      // title: noteTitle, // DO NOT update title during content update process
       text: updatedNoteText, // Use the AI's response
       files: mergedFiles,
       images: mergedImages,
