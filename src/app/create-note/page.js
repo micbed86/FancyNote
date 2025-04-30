@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react'; // Added useCallback
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Import useSearchParams
 import { supabase } from '@/lib/supabase';
 import DashboardLayout from '../components/DashboardLayout';
 import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon, CheckCircle } from '@/lib/icons'; // Import necessary icons + EditIcon (Removed Play, Pause, Stop)
@@ -9,6 +9,9 @@ import './create-note.css'; // Link to the CSS file we will create
 
 export default function CreateNotePage() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // Get search params
+  const updateId = searchParams.get('updateId'); // Check for updateId
+
   const [manualText, setManualText] = useState('');
   const [noteTitle, setNoteTitle] = useState('New Note'); // Add state for title
   const [attachments, setAttachments] = useState([]); // Store { file: File, includeInContext: boolean } objects
@@ -304,105 +307,141 @@ export default function CreateNotePage() {
     setProcessError(''); // Clear previous errors
 
     // Basic check: require at least text, audio, or an attachment
-    if (!manualText && !audioBlob && attachments.length === 0) {
+    // In update mode, we might allow processing with no *new* content if only title is changed?
+    // For now, keep the check simple: require *new* content for both create and update.
+    if (!manualText && !audioBlob && attachments.length === 0 && !updateId) { // Added !updateId check, maybe refine later
         setProcessError('Please add some content (text, recording, or attachment) before processing.');
         setIsProcessing(false);
         return;
     }
 
-    // TODO: Implement credit check before proceeding
+    // TODO: Implement credit check before proceeding (ensure it runs for both create and update)
 
     // --- Finalize recordings before sending ---
     let finalVoiceRecordings = [...voiceRecordings];
     if (audioBlob && audioUrl) {
-      // If there's a current recording that wasn't moved yet (user didn't start another)
       const recordingName = `Recording ${finalVoiceRecordings.length + 1}.webm`;
       finalVoiceRecordings.push({ blob: audioBlob, url: audioUrl, name: recordingName });
-      // Clear the current audio state as it's now part of the list to be sent
       setAudioBlob(null);
-      setAudioUrl(null); // URL will be revoked by cleanup effect later
+      setAudioUrl(null);
     }
     // --- End finalize recordings ---
 
     const formData = new FormData();
     formData.append('manualText', manualText);
-    formData.append('noteTitle', noteTitle); // Send the title
+    formData.append('noteTitle', noteTitle); // Send the title (could be updated)
 
     // Append voice recordings
     finalVoiceRecordings.forEach((recording, index) => {
-      // Use a consistent naming convention the backend can parse
       formData.append(`voiceRecording_${index}`, recording.blob, recording.name);
     });
 
     // Append other attachments (files/images)
     const attachmentContextFlags = [];
     attachments.forEach((item, index) => {
-      // Use a different key for general attachments vs voice recordings
-      formData.append(`attachment_${index}`, item.file); // Append the File object
+      formData.append(`attachment_${index}`, item.file);
       attachmentContextFlags.push(item.includeInContext);
     });
-    // Send context flags separately if needed, or combine logic on backend
     formData.append('attachmentContextFlags', JSON.stringify(attachmentContextFlags));
 
-    console.log('Sending data to /api/notes/process...');
+    // --- Conditional Logic for Update vs Create ---
+    if (updateId) {
+      // --- UPDATE FLOW ---
+      formData.append('noteId', updateId); // Add noteId for the backend
+      console.log(`Sending data to /api/notes/update-process for note ID: ${updateId}...`);
 
-    try {
-      // Get the session token to send for server-side auth
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        throw new Error('Could not get user session for authentication.');
-      }
-      const accessToken = session.access_token;
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          throw new Error('Could not get user session for authentication.');
+        }
+        const accessToken = session.access_token;
 
-      // First, save the note with its attachments using the regular process endpoint
-      const saveResponse = await fetch('/api/notes/process', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: formData,
-      });
-
-      const saveResult = await saveResponse.json();
-
-      if (!saveResponse.ok) {
-        throw new Error(saveResult.error || `HTTP error! status: ${saveResponse.status}`);
-      }
-
-      console.log('Note saved successfully:', saveResult);
-      
-      // If we have a noteId, start the async processing
-      if (saveResult.noteId) {
-        // Call the async processing endpoint
-        const processResponse = await fetch('/api/notes/process-async', {
+        const updateResponse = await fetch('/api/notes/update-process', { // New endpoint
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
+            // Content-Type is set automatically for FormData
           },
-          body: JSON.stringify({ noteId: saveResult.noteId }),
+          body: formData,
         });
 
-        if (!processResponse.ok) {
-          const processError = await processResponse.json();
-          console.error('Async processing request failed:', processError);
-          // We don't throw here as the note was already saved successfully
-        } else {
-          console.log('Async processing started successfully');
+        const updateResult = await updateResponse.json();
+
+        if (!updateResponse.ok) {
+          throw new Error(updateResult.error || `HTTP error! status: ${updateResponse.status}`);
         }
 
-        // Redirect to the notes list page
-        router.push('/notes');
-      } else {
-        // Fallback redirect if noteId is missing for some reason
-        router.push('/notes');
+        console.log('Note updated successfully:', updateResult);
+        router.push(`/notes/${updateId}`); // Redirect to the updated note
+
+      } catch (error) {
+        console.error('Error updating note:', error);
+        setProcessError(`Failed to update note: ${error.message}`);
+      } finally {
+        setIsProcessing(false);
       }
 
-    } catch (error) {
-      console.error('Error processing note:', error);
-      setProcessError(`Failed to process note: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
+    } else {
+      // --- CREATE FLOW (Existing Logic) ---
+      console.log('Sending data to /api/notes/process...');
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          throw new Error('Could not get user session for authentication.');
+        }
+        const accessToken = session.access_token;
+
+        // First, save the note with its attachments using the regular process endpoint
+        const saveResponse = await fetch('/api/notes/process', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: formData,
+        });
+
+        const saveResult = await saveResponse.json();
+
+        if (!saveResponse.ok) {
+          throw new Error(saveResult.error || `HTTP error! status: ${saveResponse.status}`);
+        }
+
+        console.log('Note saved successfully:', saveResult);
+
+        // If we have a noteId, start the async processing
+        if (saveResult.noteId) {
+          // Call the async processing endpoint
+          const processResponse = await fetch('/api/notes/process-async', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ noteId: saveResult.noteId }),
+          });
+
+          if (!processResponse.ok) {
+            const processErrorResult = await processResponse.json(); // Renamed variable
+            console.error('Async processing request failed:', processErrorResult);
+            // We don't throw here as the note was already saved successfully
+          } else {
+            console.log('Async processing started successfully');
+          }
+
+          // Redirect to the notes list page
+          router.push('/notes');
+        } else {
+          // Fallback redirect if noteId is missing for some reason
+          router.push('/notes');
+        }
+
+      } catch (error) {
+        console.error('Error processing note:', error);
+        setProcessError(`Failed to process note: ${error.message}`);
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -608,7 +647,7 @@ export default function CreateNotePage() {
             onClick={handleProcessNote}
             disabled={isProcessing || isRecording} // Disable button while processing OR recording
           >
-            {isProcessing ? 'Processing...' : 'Process Note'}
+            {isProcessing ? 'Processing...' : (updateId ? 'Process Update' : 'Process Note')}
           </button>
         </div>
 

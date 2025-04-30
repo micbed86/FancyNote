@@ -45,9 +45,12 @@ export async function GET(request, { params }) {
     }
     const requestedRelativePath = posixPath.join(...pathSegments);
 
-    // 2. Security Check: Ensure the path starts with the authenticated user's ID
-    if (!requestedRelativePath.startsWith(userId + '/')) {
-      console.warn(`Access Denied: User ${userId} attempted to access path ${requestedRelativePath}`);
+    // 2. Security Check: Ensure the path starts with the authenticated user's ID OR is a backup path belonging to the user
+    const isDirectUserPath = requestedRelativePath.startsWith(userId + '/');
+    const isBackupPathForUser = requestedRelativePath.startsWith(`note_backups/${userId}/`);
+
+    if (!isDirectUserPath && !isBackupPathForUser) {
+      console.warn(`Access Denied: User ${userId} attempted to access invalid path ${requestedRelativePath}`);
       return new NextResponse('Forbidden: Access denied', { status: 403 });
     }
 

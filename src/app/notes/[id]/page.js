@@ -446,6 +446,18 @@ export default function NotePage({ params }) { // Renamed component
     }
   }, [noteText, noteTitle]); // Dependencies for useCallback
   // --- End Share Handler ---
+
+  // --- Update Note Handler ---
+  const handleUpdateNote = () => {
+    if (noteId) {
+      router.push(`/create-note?updateId=${noteId}`);
+    } else {
+      console.error("Cannot update note: Note ID is missing.");
+      // Optionally show an error to the user
+      alert("Error: Could not determine the note to update.");
+    }
+  };
+  // --- End Update Note Handler ---
   
   // handleSaveChanges function is removed.
   if (loading) {
@@ -698,6 +710,7 @@ export default function NotePage({ params }) { // Renamed component
           {/* Bottom Action Buttons */}
           {/* TODO: Add functionality (Save, Share, Re-process) */}
           <div className="note-actions">
+             <button onClick={handleUpdateNote} className="standard-button button-secondary" title="Update Note"><EditIcon /> Update</button> {/* Added Update button */}
              <button onClick={handleShareNote} className="standard-button button-secondary" title="Share Note"><ShareIcon /> Share</button> {/* Removed disabled={isSaving} */}
              {/* Save Changes button removed */}
              {/* Add Re-process button if needed */}

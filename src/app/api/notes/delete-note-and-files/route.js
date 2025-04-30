@@ -93,8 +93,11 @@ export async function POST(request) {
         console.log(`[API delete-note-and-files] SFTP: Connected. Deleting ${allAttachmentPaths.length} files for note ${noteId}...`);
 
         for (const attachmentPath of allAttachmentPaths) {
-          // Basic security check: Ensure path belongs to the user
-          if (!attachmentPath.startsWith(userId + '/')) {
+          // Security Check: Ensure path belongs to the user OR is a backup path for the user
+          const isDirectUserPath = attachmentPath.startsWith(userId + '/');
+          const isBackupPathForUser = attachmentPath.startsWith(`note_backups/${userId}/`);
+
+          if (!isDirectUserPath && !isBackupPathForUser) {
               console.warn(`[API delete-note-and-files] SFTP: Skipping deletion of potential invalid path: ${attachmentPath} for user ${userId}`);
               sftpErrors.push(`Skipped potentially invalid path: ${attachmentPath}`);
               continue; // Skip this file
