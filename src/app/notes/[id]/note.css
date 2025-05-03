@@ -462,9 +462,11 @@
 .attachment-info span { /* Filename */
   font-size: 14px;
   color: #e0e0e0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal; /* Allow wrapping */
+  overflow-wrap: break-word; /* Break long words */
+  word-wrap: break-word; /* Legacy support */
+  overflow: visible; /* Remove overflow hidden */
+  text-overflow: clip; /* Remove ellipsis */
 }
 .attachment-item .checkbox-wrapper {
   margin-left: auto; /* Push checkbox to the right */
@@ -648,9 +650,11 @@
 }
 
 .pdf-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal; /* Allow wrapping */
+  overflow-wrap: break-word; /* Break long words */
+  word-wrap: break-word; /* Legacy support */
+  overflow: visible; /* Remove overflow hidden */
+  text-overflow: clip; /* Remove ellipsis */
   max-width: 80%;
 }
 

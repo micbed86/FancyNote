@@ -210,10 +210,21 @@
 .attachments-section .attachment-info span {
   font-size: 14px;
   color: #e0e0e0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal; /* Allow wrapping */
+  overflow-wrap: break-word; /* Break long words */
+  word-wrap: break-word; /* Legacy support */
+  overflow: visible; /* Remove overflow hidden */
+  text-overflow: clip; /* Remove ellipsis */
 }
+
+.web-url-info {
+  white-space: normal; /* Allow wrapping */
+  overflow-wrap: break-word; /* Break long words */
+  word-wrap: break-word; /* Legacy support */
+  overflow: visible; /* Remove overflow hidden */
+  text-overflow: clip; /* Remove ellipsis */
+}
+
 .attachments-section .attachment-item .checkbox-wrapper {
   margin-left: auto;
   flex-shrink: 0;
