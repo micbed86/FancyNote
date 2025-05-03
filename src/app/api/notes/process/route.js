@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid'; // For generating unique filenames
 import path, { posix as posixPath } from 'path'; // Import posix version for SFTP paths
 import { sftpService } from '@/lib/sftp-service'; // Import our SFTP service
+import { scrapeUrlContent, extractDomain, sanitizeFilename } from '@/lib/scraping-service'; // Import scraping functions
 
 export const dynamic = 'force-dynamic'; // Force dynamic execution for auth
 
@@ -72,15 +73,20 @@ export async function POST(request) {
     // const audioBlob = formData.get('audioBlob'); // Removed: Now handling multiple voice recordings
     // const attachments = formData.getAll('attachments'); // Removed: Now handling indexed attachments
     const attachmentContextFlags = JSON.parse(formData.get('attachmentContextFlags') || '[]'); // Keep context flags
+    const webUrlsString = formData.get('webUrls');
+    const webUrls = webUrlsString ? JSON.parse(webUrlsString) : [];
 
     console.log('Received manualText:', !!manualText);
     // console.log('Received audioBlob:', !!audioBlob); // Removed
     // console.log('Received attachments count:', attachments.length); // Will log individually now
     console.log('Received context flags:', attachmentContextFlags);
+    console.log('Received webUrls:', webUrls);
 
 
-    // 4. Process and Upload Files/Audio
+    // 4. Process and Upload Files/Audio/Web Content
     const uploadedFilePaths = { files: [], images: [], voice: [] }; // Store relative paths
+    const scrapingErrors = []; // To store errors from scraping
+    // const llmWebResources = []; // Prepare for LLM (though not saved directly here)
 
     // Upload Audio & Attachments by iterating through FormData
     let attachmentIndex = 0; // To correlate with context flags if needed
@@ -133,12 +139,64 @@ export async function POST(request) {
 
     // --- End Combined Upload Loop ---
 
+    // --- Process Web URLs ---
+    if (webUrls && webUrls.length > 0) {
+      console.log(`Processing ${webUrls.length} web URLs...`);
+      for (let i = 0; i < webUrls.length; i++) {
+        const url = webUrls[i];
+        console.log(`Scraping URL ${i + 1}: ${url}`);
+        const scrapeResult = await scrapeUrlContent(url);
+
+        if (scrapeResult.success) {
+          try {
+            const pageTitle = scrapeResult.title || extractDomain(url);
+            const baseFilename = sanitizeFilename(pageTitle) || `web_content_${i + 1}`;
+            const uniqueFilename = `${uuidv4()}_${baseFilename}.txt`;
+            const fileContent = `Original URL: ${url}\n\n${scrapeResult.content}`;
+            const fileBuffer = Buffer.from(fileContent, 'utf-8');
+            const fileSize = fileBuffer.length;
+
+            const targetDir = 'files'; // Save scraped content as regular files
+            const relativeFilePath = posixPath.join(userId, targetDir, uniqueFilename);
+            if (!sftpBasePath) throw new Error("SFTP Base Path not configured");
+            const remoteFilePath = posixPath.join(sftpBasePath, relativeFilePath);
+
+            console.log(`Uploading scraped content via SFTP to: ${remoteFilePath}`);
+            await sftpService.uploadFile(sftpClient, fileBuffer, remoteFilePath);
+            console.log('SFTP Scraped content uploaded successfully.');
+
+            // Add metadata to the files list
+            uploadedFilePaths.files.push({
+              path: relativeFilePath,
+              name: `${baseFilename}.txt`, // Use the generated name
+              size: fileSize,
+              includeInContext: true, // Assume scraped content should be included by default
+              originalUrl: url // Store original URL for potential future use
+            });
+
+            // Prepare LLM resource string (though not saved in this step)
+            // const llmResource = `<web_page_resource_${i + 1}>\nurl = {\n[${url}]\n},\ncontent = {\n[${scrapeResult.content}]\n}\n</web_page_resource_${i + 1}>`;
+            // llmWebResources.push(llmResource);
+
+          } catch (uploadError) {
+            console.error(`Error uploading scraped content for ${url}:`, uploadError);
+            scrapingErrors.push({ url: url, error: `Failed to save scraped content: ${uploadError.message}` });
+          }
+        } else {
+          console.warn(`Scraping failed for URL: ${url}, Error: ${scrapeResult.error}`);
+          scrapingErrors.push({ url: url, error: scrapeResult.error || 'Unknown scraping error' });
+        }
+      }
+    }
+    // --- End Process Web URLs ---
+
+
     // 5. Prepare Note Data for Supabase
     const noteData = {
       user_id: userId,
       title: noteTitle, // Use title from form data
       text: manualText, // Keep text content
-      // Store the relative paths and metadata
+      // Store the relative paths and metadata (files array now includes scraped content)
       files: uploadedFilePaths.files,
       images: uploadedFilePaths.images,
       voice: uploadedFilePaths.voice,
@@ -166,7 +224,12 @@ export async function POST(request) {
     console.log('Note saved successfully with ID:', newNote.id);
 
     // 7. Return Success Response (e.g., the new note ID)
-    return NextResponse.json({ message: 'Note processed successfully!', noteId: newNote.id });
+    // 7. Return Success Response (including scraping errors)
+    return NextResponse.json({
+        message: 'Note processed successfully!',
+        noteId: newNote.id,
+        scrapingErrors: scrapingErrors // Include scraping errors in the response
+    });
 
   } catch (error) {
     console.error('Error processing note:', error);

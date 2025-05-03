@@ -5,16 +5,22 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 // Note: Assuming DashboardLayout is not needed *inside* this client component if page.js handles it.
 // import DashboardLayout from '../components/DashboardLayout';
-import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon, CheckCircle } from '@/lib/icons';
+import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon, CheckCircle, PlusIcon, GlobeIcon, XIcon } from '@/lib/icons'; // Added PlusIcon, GlobeIcon, XIcon
 import './create-note.css';
 
 // Renamed the function to reflect its role
 export default function CreateNoteForm() {
   const router = useRouter();
+  // Removed useNotifications hook - Notifications are handled via backend DB entries
   const searchParams = useSearchParams(); // Get search params
   const updateId = searchParams.get('updateId'); // Check for updateId
 
-  // All state and refs moved here
+  // State related to Web URLs
+  const [webUrls, setWebUrls] = useState([]); // State for added URLs
+  const [currentUrl, setCurrentUrl] = useState(''); // State for the URL input field
+  console.log('CreateNoteForm rendering, currentUrl declared:', typeof currentUrl, currentUrl); // Add console log for debugging
+
+  // Other state and refs
   const [manualText, setManualText] = useState('');
   const [noteTitle, setNoteTitle] = useState('New Note');
   const [attachments, setAttachments] = useState([]);
@@ -196,6 +202,27 @@ export default function CreateNoteForm() {
     ));
   };
 
+  // --- Web URL Handlers ---
+  const handleAddWebUrl = () => {
+    const trimmedUrl = currentUrl.trim();
+    // Basic validation: check if not empty and maybe looks like a URL
+    if (trimmedUrl && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))) {
+      if (!webUrls.includes(trimmedUrl)) { // Avoid duplicates
+        setWebUrls(prev => [...prev, trimmedUrl]);
+      }
+      setCurrentUrl(''); // Clear input field
+    } else {
+      // Optionally show an error message for invalid URL format
+      alert('Please enter a valid URL starting with http:// or https://');
+    }
+  };
+
+  const handleRemoveWebUrl = (indexToRemove) => {
+    setWebUrls(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+  // --- End Web URL Handlers ---
+
+
   useEffect(() => {
     return () => {
       if (audioUrl) {
@@ -268,8 +295,18 @@ export default function CreateNoteForm() {
     setIsProcessing(true);
     setProcessError('');
 
-    if (!manualText && !audioBlob && attachments.length === 0 && !updateId) {
-        setProcessError('Please add some content (text, recording, or attachment) before processing.');
+    // Combine current URL input with the list, if current URL is not empty
+    let finalUrlList = [...webUrls];
+    const trimmedCurrentUrl = currentUrl.trim();
+    if (trimmedCurrentUrl && (trimmedCurrentUrl.startsWith('http://') || trimmedCurrentUrl.startsWith('https://'))) {
+        if (!finalUrlList.includes(trimmedCurrentUrl)) {
+            finalUrlList.push(trimmedCurrentUrl);
+        }
+        setCurrentUrl(''); // Clear input after adding it to the list for processing
+    }
+
+    if (!manualText && !audioBlob && attachments.length === 0 && finalUrlList.length === 0 && !updateId) {
+        setProcessError('Please add some content (text, recording, attachment, or URL) before processing.');
         setIsProcessing(false);
         return;
     }
@@ -298,6 +335,7 @@ export default function CreateNoteForm() {
       attachmentContextFlags.push(item.includeInContext);
     });
     formData.append('attachmentContextFlags', JSON.stringify(attachmentContextFlags));
+    formData.append('webUrls', JSON.stringify(finalUrlList)); // Add web URLs
 
     // --- Conditional Logic for Update vs Create ---
     if (updateId) {
@@ -317,6 +355,11 @@ export default function CreateNoteForm() {
         const updateResult = await updateResponse.json();
         if (!updateResponse.ok) throw new Error(updateResult.error || `HTTP error! status: ${updateResponse.status}`);
         console.log('Note updated successfully:', updateResult);
+        // TODO: Handle scrapingErrors from updateResult if the API returns them
+        if (updateResult.scrapingErrors && updateResult.scrapingErrors.length > 0) {
+          // Backend should create DB notification. Log warning here.
+          console.warn("Scraping errors occurred (backend should notify):", updateResult.scrapingErrors);
+        }
         router.push(`/notes/${updateId}`);
       } catch (error) {
         console.error('Error updating note:', error);
@@ -341,7 +384,15 @@ export default function CreateNoteForm() {
         if (!saveResponse.ok) throw new Error(saveResult.error || `HTTP error! status: ${saveResponse.status}`);
         console.log('Note saved successfully:', saveResult);
 
+        // TODO: Handle scrapingErrors from saveResult if the API returns them
+        if (saveResult.scrapingErrors && saveResult.scrapingErrors.length > 0) {
+           // Backend should create DB notification. Log warning here.
+          console.warn("Scraping errors occurred (backend should notify):", saveResult.scrapingErrors);
+          // Continue processing even if scraping had issues
+        }
+
         if (saveResult.noteId) {
+          // Trigger async processing only if the initial save was okay
           const processResponse = await fetch('/api/notes/process-async', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -533,6 +584,47 @@ export default function CreateNoteForm() {
             </li>
           ))}
         </ul>
+      </div>
+{/* Web URL Input Section */}
+      <div className="web-url-section card">
+        <h3 className="header3">Add Web Page Content</h3>
+        <div className="web-url-input-container">
+          <GlobeIcon /> {/* Icon for visual cue */}
+          <input
+            type="url"
+            className="input web-url-input"
+            placeholder="Enter web page URL (e.g., https://...)"
+            value={currentUrl}
+            onChange={(e) => setCurrentUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddWebUrl()} // Add on Enter key press
+          />
+          <button
+            onClick={handleAddWebUrl}
+            className="standard-button button-secondary add-url-button"
+            title="Add URL to list"
+          >
+            <PlusIcon />
+          </button>
+        </div>
+        {webUrls.length > 0 && (
+          <ul className="attachment-list web-url-list">
+            {webUrls.map((url, index) => (
+              <li key={index} className="attachment-item web-url-item">
+                <div className="attachment-info web-url-info">
+                  <GlobeIcon />
+                  <a href={url} target="_blank" rel="noopener noreferrer" title={url}>{url}</a> {/* Make URL clickable */}
+                </div>
+                <button
+                  onClick={() => handleRemoveWebUrl(index)}
+                  className="control-button delete-button attachment-delete-btn"
+                  title="Remove URL"
+                >
+                  <XIcon /> {/* Use XIcon for removing */}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Display Processing Error */}

@@ -4,12 +4,14 @@ import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import { posix as posixPath } from 'path'; // Use posix for consistent SFTP paths
 import { sftpService } from '@/lib/sftp-service';
+import { scrapeUrlContent, extractDomain, sanitizeFilename } from '@/lib/scraping-service'; // Import scraping functions
 import dayjs from 'dayjs'; // For timestamp formatting
 import fs from 'fs/promises'; // For temp file operations
 import fsStandard from 'fs'; // For createReadStream
 import os from 'os'; // For temp directory
 import path from 'path'; // For local path operations
 import Groq from 'groq-sdk'; // For transcription
+import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is imported if not already (it is)
 
 export const dynamic = 'force-dynamic'; // Force dynamic execution for auth
 
@@ -199,6 +201,8 @@ export async function POST(request) {
     const manualText = formData.get('manualText') || ''; // New text input
     const noteTitle = formData.get('noteTitle') || 'Untitled Note'; // Potentially updated title
     const attachmentContextFlags = JSON.parse(formData.get('attachmentContextFlags') || '[]');
+    const webUrlsString = formData.get('webUrls');
+    const webUrls = webUrlsString ? JSON.parse(webUrlsString) : []; // Parse new web URLs
 
     if (!noteId) {
       return NextResponse.json({ error: 'Bad Request: Missing noteId' }, { status: 400 });
@@ -248,6 +252,7 @@ export async function POST(request) {
     const newTranscriptions = []; // Store { index: number, content: string }
     const newFileContents = []; // Store { index: number, name: string, content: string }
     const newImagesForContext = []; // Store image details for processWithLLM
+    const scrapingErrors = []; // To store errors from scraping
     let attachmentIndex = 0;
     let voiceIndex = 1;
     let textFileIndex = 1;
@@ -340,7 +345,58 @@ export async function POST(request) {
     }
     console.log("New attachments processed, uploaded, and content prepared for AI.");
 
-    // 7. Format New User Content for AI
+    // --- Process *New* Web URLs ---
+    if (webUrls && webUrls.length > 0) {
+      console.log(`Processing ${webUrls.length} new web URLs for update...`);
+      for (let i = 0; i < webUrls.length; i++) {
+        const url = webUrls[i];
+        console.log(`Scraping URL ${i + 1}: ${url}`);
+        const scrapeResult = await scrapeUrlContent(url);
+
+        if (scrapeResult.success) {
+          try {
+            const pageTitle = scrapeResult.title || extractDomain(url);
+            const baseFilename = sanitizeFilename(pageTitle) || `web_content_${i + 1}`;
+            const uniqueFilename = `${uuidv4()}_${baseFilename}.txt`;
+            const fileContent = `Original URL: ${url}\n\n${scrapeResult.content}`;
+            const fileBuffer = Buffer.from(fileContent, 'utf-8');
+            const fileSize = fileBuffer.length;
+
+            const targetDir = 'files'; // Save scraped content as regular files
+            const relativeFilePath = posixPath.join(userId, targetDir, uniqueFilename);
+            if (!sftpBasePath) throw new Error("SFTP Base Path not configured");
+            const remoteFilePath = posixPath.join(sftpBasePath, relativeFilePath);
+
+            console.log(`Uploading scraped content via SFTP to: ${remoteFilePath}`);
+            await sftpService.uploadFile(sftpClient, fileBuffer, remoteFilePath);
+            console.log('SFTP Scraped content uploaded successfully.');
+
+            // Add metadata to the *new* files list for merging later
+            newUploadedFilePaths.files.push({
+              path: relativeFilePath,
+              name: `${baseFilename}.txt`,
+              size: fileSize,
+              includeInContext: true, // Assume included by default for updates too
+              originalUrl: url,
+              created_at: new Date().toISOString() // Add timestamp
+            });
+            // NOTE: Scraped content is NOT added to formattedNewContent for the LLM update prompt.
+            // It's treated as a new file attachment.
+
+          } catch (uploadError) {
+            console.error(`Error uploading scraped content for ${url}:`, uploadError);
+            scrapingErrors.push({ url: url, error: `Failed to save scraped content: ${uploadError.message}` });
+          }
+        } else {
+          console.warn(`Scraping failed for URL: ${url}, Error: ${scrapeResult.error}`);
+          scrapingErrors.push({ url: url, error: scrapeResult.error || 'Unknown scraping error' });
+        }
+      }
+    }
+    // --- End Process Web URLs ---
+
+
+    // 7. Format New User Content for AI (Excluding scraped web content)
     let formattedNewContent = '';
     if (newTranscriptions.length > 0) {
       newTranscriptions.forEach(t => {
@@ -454,8 +510,12 @@ ${currentNoteText}
     // --- End Credit Deduction ---
 
 
-    // 13. Return Success Response
-    return NextResponse.json({ message: 'Note updated successfully!', noteId: noteId });
+    // 13. Return Success Response (including scraping errors)
+    return NextResponse.json({
+        message: 'Note updated successfully!',
+        noteId: noteId,
+        scrapingErrors: scrapingErrors // Include scraping errors
+    });
 
   } catch (error) {
     console.error('Error processing note update:', error);
