@@ -11,7 +11,6 @@ import fsStandard from 'fs'; // For createReadStream
 import os from 'os'; // For temp directory
 import path from 'path'; // For local path operations
 import Groq from 'groq-sdk'; // For transcription
-import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is imported if not already (it is)
 
 export const dynamic = 'force-dynamic'; // Force dynamic execution for auth
 
