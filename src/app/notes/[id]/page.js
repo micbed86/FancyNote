@@ -11,6 +11,23 @@ import DashboardLayout from '../../components/DashboardLayout';
 import { TrashIcon, EditIcon, MoreIcon, FileIcon, ImageIcon, CameraIcon, SaveIcon, ShareIcon, MicrophoneIcon, PlayIcon, CheckCircle } from '@/lib/icons'; // Added MicrophoneIcon, PlayIcon, Changed CheckIcon to CheckCircle
 import './note.css'; // Renamed CSS file
 
+// Helper function to format date and time as DD/MM/YYYY - HH:mm (Copied from notes/page.js)
+const formatDateTime = (dateString) => {
+  if (!dateString) return ''; // Handle cases where dateString might be null or undefined
+  const date = new Date(dateString);
+
+  // Format date as DD/MM/YYYY
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
+  const year = date.getFullYear();
+
+  // Format time as HH:mm
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+
+  return `${day}/${month}/${year} - ${hours}:${minutes}`;
+};
+
 export default function NotePage({ params }) { // Renamed component
   const router = useRouter();
   // Correctly unwrap params using React.use()
@@ -23,6 +40,7 @@ export default function NotePage({ params }) { // Renamed component
   const [noteFiles, setNoteFiles] = useState([]); // State for file attachments
   const [noteImages, setNoteImages] = useState([]); // State for image attachments
   const [noteVoice, setNoteVoice] = useState([]); // State for voice recordings
+  const [noteCreatedAt, setNoteCreatedAt] = useState(null); // State for creation date
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showMenu, setShowMenu] = useState(false); // State for delete menu
   const [error, setError] = useState(null);
@@ -92,6 +110,7 @@ export default function NotePage({ params }) { // Renamed component
           setNoteFiles(noteData.files || []); // Set file attachments
           setNoteImages(noteData.images || []); // Set image attachments
           setNoteVoice(noteData.voice || []); // Set voice recordings
+          setNoteCreatedAt(noteData.created_at); // Set creation date
         } else if (!fetchError) {
            setError('Note not found.');
         }
@@ -531,8 +550,9 @@ export default function NotePage({ params }) { // Renamed component
           </div>
         </div>
         {/* Timestamp */}
-        {/* TODO: Fetch and display actual creation/modification date */}
-        <div className="timestamp">April 11, 2025</div>
+        {noteCreatedAt && (
+          <div className="timestamp">{formatDateTime(noteCreatedAt)}</div>
+        )}
 
         {/* Main Content Area */}
         <div className="note-content-area">

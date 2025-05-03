@@ -8,6 +8,15 @@ import { supabase } from '@/lib/supabase';
 import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon, CheckCircle, PlusIcon, GlobeIcon, XIcon } from '@/lib/icons'; // Added PlusIcon, GlobeIcon, XIcon
 import './create-note.css';
 
+// Helper function to format file size (copied for consistency if needed elsewhere)
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 // Renamed the function to reflect its role
 export default function CreateNoteForm() {
   const router = useRouter();
@@ -207,10 +216,16 @@ export default function CreateNoteForm() {
     const trimmedUrl = currentUrl.trim();
     // Basic validation: check if not empty and maybe looks like a URL
     if (trimmedUrl && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))) {
-      if (!webUrls.includes(trimmedUrl)) { // Avoid duplicates
-        setWebUrls(prev => [...prev, trimmedUrl]);
+      // Simple check for plausible URL structure (very basic)
+      try {
+        new URL(trimmedUrl);
+        if (!webUrls.includes(trimmedUrl)) { // Avoid duplicates
+          setWebUrls(prev => [...prev, trimmedUrl]);
+        }
+        setCurrentUrl(''); // Clear input field
+      } catch (_) {
+        alert('Please enter a valid URL.');
       }
-      setCurrentUrl(''); // Clear input field
     } else {
       // Optionally show an error message for invalid URL format
       alert('Please enter a valid URL starting with http:// or https://');
