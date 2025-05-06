@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 // Note: Assuming DashboardLayout is not needed *inside* this client component if page.js handles it.
 // import DashboardLayout from '../components/DashboardLayout';
-import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon, CheckCircle, PlusIcon, GlobeIcon, XIcon } from '@/lib/icons'; // Added PlusIcon, GlobeIcon, XIcon
+import { FileIcon, ImageIcon, CameraIcon, MicrophoneIcon, TrashIcon, EditIcon, CheckCircle, PlusIcon, GlobeIcon, XIcon, SaveIcon, BotIcon, BotOffIcon } from '@/lib/icons'; // Added PlusIcon, GlobeIcon, XIcon, SaveIcon, BotIcon, BotOffIcon
 import './create-note.css';
 
 // Helper function to format file size (copied for consistency if needed elsewhere)
@@ -46,6 +46,7 @@ export default function CreateNoteForm() {
   const timerIntervalRef = useRef(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSavingNoAi, setIsSavingNoAi] = useState(false); // New state for "No AI" save
   const [processError, setProcessError] = useState('');
   const cameraInputRef = useRef(null);
   const initialStartDoneRef = useRef(false);
@@ -432,6 +433,107 @@ export default function CreateNoteForm() {
     }
   };
 
+  const handleSaveNoAiNote = async () => {
+    setIsSavingNoAi(true);
+    setProcessError('');
+
+    let finalUrlList = [...webUrls];
+    const trimmedCurrentUrl = currentUrl.trim();
+    if (trimmedCurrentUrl && (trimmedCurrentUrl.startsWith('http://') || trimmedCurrentUrl.startsWith('https://'))) {
+        if (!finalUrlList.includes(trimmedCurrentUrl)) {
+            finalUrlList.push(trimmedCurrentUrl);
+        }
+        setCurrentUrl('');
+    }
+
+    if (!manualText && !audioBlob && attachments.length === 0 && finalUrlList.length === 0 && voiceRecordings.length === 0 && !updateId) {
+        setProcessError('Please add some content (text, recording, attachment, or URL) before saving.');
+        setIsSavingNoAi(false);
+        return;
+    }
+
+    let finalVoiceRecordings = [...voiceRecordings];
+    if (audioBlob && audioUrl) {
+      const recordingName = `Recording ${finalVoiceRecordings.length + 1}.webm`;
+      finalVoiceRecordings.push({ blob: audioBlob, url: audioUrl, name: recordingName });
+      // Don't clear audioBlob/audioUrl here yet, might be needed for transcription decision
+    }
+
+    let transcribeAudio = false;
+    if (finalVoiceRecordings.length > 0 || audioBlob) {
+      if (window.confirm("You have recorded or added audio. Do you want to transcribe the audio content and save it as a .txt attachment?")) {
+        transcribeAudio = true;
+      }
+    }
+
+    // If audioBlob was present and now processed (or decision made), clear it
+    if (audioBlob && audioUrl) {
+        setAudioBlob(null);
+        setAudioUrl(null);
+    }
+
+    const formData = new FormData();
+    formData.append('manualText', manualText);
+    formData.append('noteTitle', noteTitle);
+    formData.append('transcribeAudio', transcribeAudio.toString());
+    formData.append('webUrls', JSON.stringify(finalUrlList));
+
+    finalVoiceRecordings.forEach((recording, index) => {
+      formData.append(`voiceRecording_${index}`, recording.blob, recording.name);
+    });
+
+    attachments.forEach((item, index) => {
+      // For no-AI save, all attachments are included directly, context flag is irrelevant for this type of save
+      formData.append(`attachment_${index}`, item.file);
+    });
+    // No attachmentContextFlags needed for no-AI save as AI context is not used for content processing
+
+    // This function is for creating new notes with "no-AI" processing.
+    // If an updateId exists, this button shouldn't ideally be the primary way to "update without AI",
+    // but for simplicity, we'll prevent "no-AI" save if it's an update scenario for now,
+    // or define a separate logic/endpoint if "update with no-AI processing" is needed.
+    // For now, let's assume this is for new notes or a simplified update.
+    // We will use a new endpoint.
+    if (updateId) {
+        formData.append('noteId', updateId);
+        console.log(`Sending data with noteId ${updateId} to /api/notes/save-no-ai for an update...`);
+    } else {
+        console.log('Sending data to /api/notes/save-no-ai for a new note...');
+    }
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) throw new Error('Could not get user session.');
+      const accessToken = session.access_token;
+
+      // IMPORTANT: A new API route /api/notes/save-no-ai needs to be created.
+      // This route will handle:
+      // 1. Saving the note with raw content.
+      // 2. If transcribeAudio is true, transcribing audio and saving as .txt attachments.
+      // 3. Generating title and excerpt ONLY.
+      // 4. Saving all attachments.
+      const response = await fetch('/api/notes/save-no-ai', { // NEW API ENDPOINT
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}` }, // No 'Content-Type' for FormData
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
+      
+      console.log('Note saved (no-AI) successfully:', result);
+      if (result.scrapingErrors && result.scrapingErrors.length > 0) {
+        console.warn("Scraping errors occurred (backend should notify):", result.scrapingErrors);
+      }
+      // Navigate to the notes page or the newly created note if ID is returned
+      router.push(result.noteId ? `/notes/${result.noteId}` : '/notes');
+
+    } catch (error) {
+      console.error('Error saving note (no-AI):', error);
+      setProcessError(`Failed to save note: ${error.message}`);
+    } finally {
+      setIsSavingNoAi(false);
+    }
+  };
+
   // Render loading state while checking credits
   if (isLoadingCredits) {
     return (
@@ -652,14 +754,30 @@ export default function CreateNoteForm() {
       {/* Main Action Buttons */}
       <div className="create-note-actions">
         <button className="standard-button button-secondary" onClick={() => router.push('/notes')}>
-          Cancel
+          <TrashIcon className="button-icon" style={{ marginRight: '5px' }} /> Cancel
+        </button>
+        <button
+          className="standard-button button-secondary" // Or choose another style
+          onClick={handleSaveNoAiNote}
+          disabled={isProcessing || isSavingNoAi || isRecording}
+          title="Save note with minimal AI (title/excerpt only), transcribes audio if confirmed"
+          style={{ marginLeft: '10px' }} // Add some spacing
+        >
+          {isSavingNoAi ? (
+            'Saving...'
+          ) : (
+            <>
+              <BotOffIcon className="button-icon" style={{ marginRight: '5px' }} />
+              Just Save
+            </>
+          )}
         </button>
         <button
           className="standard-button button-primary"
           onClick={handleProcessNote}
-          disabled={isProcessing || isRecording}
+          disabled={isProcessing || isSavingNoAi || isRecording}
         >
-          {isProcessing ? 'Processing...' : (updateId ? 'Process Update' : 'Process Note')}
+          <BotIcon className="button-icon" style={{ marginRight: '5px' }} /> {isProcessing ? 'Processing...' : (updateId ? 'Process Update' : 'Process Note')}
         </button>
       </div>
 

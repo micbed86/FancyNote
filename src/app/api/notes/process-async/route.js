@@ -42,7 +42,7 @@ export async function POST(request) {
 
   try {
     // Parse request body
-    const { noteId } = await request.json();
+    const { noteId, processType } = await request.json(); // Added processType
     
     if (!noteId) {
       return NextResponse.json({ error: 'Missing noteId parameter' }, { status: 400 });
@@ -87,7 +87,7 @@ export async function POST(request) {
     // Start background processing
     // In a production environment, this would be handled by a queue system
     // For this implementation, we'll start the process and return immediately
-    processNoteInBackground(noteId, noteData, userId, aiSettings, supabaseAdmin, token);
+    processNoteInBackground(noteId, noteData, userId, aiSettings, supabaseAdmin, token, processType); // Pass processType
 
     // Return success response immediately
     return NextResponse.json({ 
@@ -103,7 +103,7 @@ export async function POST(request) {
   }
 }
 
-async function processNoteInBackground(noteId, noteData, userId, aiSettings, supabaseAdmin, token) {
+async function processNoteInBackground(noteId, noteData, userId, aiSettings, supabaseAdmin, token, processType) { // Added processType
   let sftpClient;
   const transcriptions = [];
   const transcriptionsWithMetadata = [];
@@ -255,13 +255,34 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
       }
     }
 
-    // 3. Process with LLM
+    // 3. Process with LLM (conditionally)
     let llmResponse = '';
-    if (transcriptionsWithMetadata.length > 0 || noteData.text || fileContents.length > 0 || (noteData.images && noteData.images.some(img => img.includeInContext))) {
-      console.log('Processing content with LLM');
-      llmResponse = await processWithLLM(transcriptionsWithMetadata, noteData.text, fileContents, noteData.images, aiSettings, token);
+    const hasContentForLlm = transcriptionsWithMetadata.length > 0 || noteData.text || fileContents.length > 0 || (noteData.images && noteData.images.some(img => img.includeInContext));
+
+    if (processType === 'no_ai_content_structuring') {
+      console.log(`Skipping LLM content restructuring for note ${noteId} due to processType flag.`);
+      llmResponse = noteData.text || ''; // Use original text, or empty if none
+    } else if (hasContentForLlm) {
+      console.log(`Processing content with LLM for note ${noteId}`);
+      try {
+        llmResponse = await processWithLLM(transcriptionsWithMetadata, noteData.text, fileContents, noteData.images, aiSettings, token);
+      } catch (llmError) {
+        console.error(`Error during LLM processing for note ${noteId}:`, llmError);
+        // Fallback to original text if LLM fails, and log error for the note
+        llmResponse = noteData.text || '';
+        // We'll update the note with an error status later if this happens
+        // For now, ensure processing_error in the note reflects this if it's a critical failure path.
+        // The main error handling at the end of processNoteInBackground will catch this if it throws.
+        // If processWithLLM itself handles errors and returns a string, that's fine.
+        // Consider adding a specific error to the note here if LLM is crucial and fails.
+         await supabaseAdmin
+          .from('notes')
+          .update({ processing_error: `LLM processing failed: ${llmError.message}. Used original text.` })
+          .eq('id', noteId);
+      }
     } else {
-      console.log('No content to process with LLM');
+      console.log(`No content to process with LLM for note ${noteId}`);
+      llmResponse = noteData.text || ''; // Use original text if no content for LLM, or empty
     }
 
     // Note: Title and Excerpt generation moved to AFTER the initial content update
@@ -291,7 +312,15 @@ async function processNoteInBackground(noteId, noteData, userId, aiSettings, sup
     console.log(`Initial update successful for note ${noteId}`);
 
     // --- Generate Title & Excerpt using FINAL content ---
-    const contentForGroq = updatePayload.text; // Use the final text saved in the DB
+    // If the main text is empty but transcriptions exist, use transcriptions for title/excerpt.
+    let contentForGroq = updatePayload.text;
+    if ((!contentForGroq || contentForGroq.trim() === '') && transcriptions.length > 0) {
+      console.log('Main text is empty, using transcriptions for title/excerpt generation.');
+      contentForGroq = transcriptions.join('\n\n');
+    } else if (!contentForGroq || contentForGroq.trim() === '') {
+      console.log('Main text and transcriptions are empty. Title/excerpt generation might be skipped or use defaults.');
+      // contentForGroq remains empty, generateNoteTitle/Excerpt should handle this gracefully.
+    }
     let generatedTitle = null;
     let generatedExcerpt = null;
     const language = aiSettings?.language || 'en';
