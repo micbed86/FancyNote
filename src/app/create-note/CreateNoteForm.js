@@ -139,10 +139,42 @@ export default function CreateNoteForm() {
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(blob);
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
+        console.log('MediaRecorder onstop event triggered.');
+        try {
+          if (audioChunksRef.current.length === 0) {
+            console.warn('No audio chunks recorded. This might happen if stop is called too quickly or no data was received.');
+            // No blob to create if chunks are empty, so we can return or handle appropriately
+          } else {
+            const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            console.log('Audio Blob created, size:', blob.size);
+            setAudioBlob(blob);
+            const url = URL.createObjectURL(blob);
+            setAudioUrl(url);
+            console.log('Audio URL created:', url);
+          }
+        } catch (error) {
+          console.error('Error creating audio Blob or URL:', error);
+          setProcessError('Failed to process audio recording.');
+          setAudioBlob(null);
+          setAudioUrl(null);
+        } finally {
+          audioChunksRef.current = []; // Clear chunks regardless of success or failure
+          console.log('Audio chunks cleared.');
+
+          setIsRecording(false);
+          console.log('Recording state set to false in onstop.');
+
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+            console.log('Media stream stopped in onstop.');
+          }
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+            console.log('Recording timer cleared in onstop.');
+          }
+        }
       };
 
       mediaRecorderRef.current.start(1000);
@@ -161,15 +193,25 @@ export default function CreateNoteForm() {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      console.log('Calling mediaRecorder.stop() from stopRecording function...');
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      console.log('Recording stopped');
+      // State updates and resource cleanup are now primarily handled by the 'onstop' event handler.
+    } else {
+      console.log('stopRecording called, but MediaRecorder not active or not in recording state. Current state:', mediaRecorderRef.current?.state);
+      // If not recording, but we want to ensure cleanup (e.g., if UI is out of sync)
+      // Consider if any cleanup should happen here, though 'onstop' should be the main place.
+      // For instance, if streamRef or timerIntervalRef are somehow active without 'isRecording' being true:
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
+        console.log('Cleaned up stream in stopRecording as a fallback.');
       }
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+        console.log('Cleaned up timer in stopRecording as a fallback.');
+      }
+      setIsRecording(false); // Ensure recording state is false if called when not recording
     }
   };
 
