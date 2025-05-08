@@ -272,11 +272,30 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error('Error in save-no-ai endpoint:', error);
-    return NextResponse.json({ error: error.message || 'An unexpected error occurred.' }, { status: 500 });
+    console.error('Error in save-no-ai endpoint. Type:', typeof error, 'Message:', error ? error.message : 'N/A', 'Stack:', error ? error.stack : 'N/A');
+    // Try to return a more robust and simple JSON response
+    try {
+        return NextResponse.json({
+            error_message: "A server error occurred in save-no-ai processing.",
+            error_details: String(error ? error.message : 'Unknown error type')
+        }, { status: 500 });
+    } catch (responseError) {
+        console.error("CRITICAL: Failed to create JSON response in save-no-ai's main catch block:", responseError);
+        // Fallback to a plain text response if NextResponse.json itself fails
+        return new Response("Internal Server Error - Response Generation Failed in save-no-ai", {
+            status: 500,
+            headers: { 'Content-Type': 'text/plain' }
+        });
+    }
   } finally {
-    if (sftpClient) {
-      await sftpService.disconnect(sftpClient);
+    // Ensure sftpClient is defined and disconnect is attempted
+    if (sftpClient && typeof sftpService.disconnect === 'function') {
+      try {
+        await sftpService.disconnect(sftpClient);
+      } catch (disconnectError) {
+        console.error("Error during SFTP disconnect in finally block:", disconnectError);
+        // Optionally handle or log this, but don't let it crash the response
+      }
     }
   }
 }

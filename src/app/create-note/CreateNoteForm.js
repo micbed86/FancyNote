@@ -164,7 +164,7 @@ export default function CreateNoteForm() {
           setIsRecording(false);
           console.log('Recording state set to false in onstop.');
 
-          if (streamRef.current) {
+          if (streamRef.current) { 
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
             console.log('Media stream stopped in onstop.');
@@ -558,19 +558,42 @@ export default function CreateNoteForm() {
         headers: { 'Authorization': `Bearer ${accessToken}` }, // No 'Content-Type' for FormData
         body: formData,
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
+      let result;
+      let errorPayload = { message: `HTTP error! status: ${response.status}` };
+
+      try {
+        result = await response.json();
+        if (!response.ok) {
+          errorPayload.message = result.error || result.error_message || result.message || `HTTP error! status: ${response.status}`;
+          if (result.error_details) errorPayload.details = result.error_details;
+          throw new Error(errorPayload.message);
+        }
+      } catch (e) { // This catches errors from response.json() if body is not JSON
+        if (response.ok) {
+          // If response.ok is true but .json() failed, it's a weird case.
+          console.error('Error parsing JSON from OK response (no-AI):', e);
+          errorPayload.message = 'Failed to parse server response despite OK status.';
+        } else {
+          // If !response.ok and .json() failed, try to get text for more info.
+          const textResponse = await response.text().catch(() => "Could not get response text.");
+          console.error(`Failed to parse JSON error response (status ${response.status}). Body:`, textResponse);
+          errorPayload.message = `Server error (status ${response.status}). Response: ${textResponse.substring(0, 200)}`;
+        }
+        throw new Error(errorPayload.message); // Re-throw to be caught by the outer catch
+      }
       
       console.log('Note saved (no-AI) successfully:', result);
       if (result.scrapingErrors && result.scrapingErrors.length > 0) {
         console.warn("Scraping errors occurred (backend should notify):", result.scrapingErrors);
       }
-      // Navigate to the notes page or the newly created note if ID is returned
       router.push(result.noteId ? `/notes/${result.noteId}` : '/notes');
 
     } catch (error) {
-      console.error('Error saving note (no-AI):', error);
-      setProcessError(`Failed to save note: ${error.message}`);
+      console.error('Error saving note (no-AI):', error.message);
+      if (error.stack) console.error('Stack trace (no-AI):', error.stack);
+      // Check if the error object has more details (e.g., from our custom errorPayload)
+      const displayMessage = error.details ? `${error.message} - Details: ${error.details}` : error.message;
+      setProcessError(`Failed to save note: ${displayMessage}`);
     } finally {
       setIsSavingNoAi(false);
     }
