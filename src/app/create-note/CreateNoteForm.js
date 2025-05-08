@@ -145,7 +145,7 @@ export default function CreateNoteForm() {
         setAudioUrl(url);
       };
 
-      mediaRecorderRef.current.start();
+      mediaRecorderRef.current.start(1000);
       setIsRecording(true);
       console.log('Recording started');
       setRecordingTime(0);
