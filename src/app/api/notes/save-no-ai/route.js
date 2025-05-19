@@ -10,12 +10,32 @@ export const dynamic = 'force-dynamic'; // Force dynamic execution for auth
 
 
 export async function POST(request) {
-  const supabaseAdmin = createClient(
+  console.log('[save-no-ai] POST /api/notes/save-no-ai called.');
+  let supabaseAdmin, supabaseAuth;
+  try {
+    console.log('[save-no-ai] Initializing Supabase Admin client...');
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) console.error('[save-no-ai] ERROR: NEXT_PUBLIC_SUPABASE_URL is not set');
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) console.error('[save-no-ai] ERROR: SUPABASE_SERVICE_ROLE_KEY is not set');
+    supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
-  );
-  const supabaseAuth = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    );
+    console.log('[save-no-ai] Supabase Admin client initialized successfully.');
+  } catch (e) {
+    console.error('[save-no-ai] CRITICAL ERROR initializing Supabase Admin client:', e);
+    return NextResponse.json({ error: 'Server configuration error (Admin Client)' }, { status: 500 });
+  }
+  try {
+    console.log('[save-no-ai] Initializing Supabase Auth client...');
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) console.error('[save-no-ai] ERROR: NEXT_PUBLIC_SUPABASE_URL is not set for Auth client');
+    if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) console.error('[save-no-ai] ERROR: NEXT_PUBLIC_SUPABASE_ANON_KEY is not set');
+    supabaseAuth = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    console.log('[save-no-ai] Supabase Auth client initialized successfully.');
+  } catch (e) {
+    console.error('[save-no-ai] CRITICAL ERROR initializing Supabase Auth client:', e);
+    return NextResponse.json({ error: 'Server configuration error (Auth Client)' }, { status: 500 });
+  }
 
   const authHeader = request.headers.get('Authorization');
   const token = authHeader?.split('Bearer ')[1];
@@ -42,9 +62,13 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Server SFTP configuration error.' }, { status: 500 });
     }
 
+    console.log('[save-no-ai] Attempting to connect to SFTP...');
     sftpClient = await sftpService.connect();
+    console.log('[save-no-ai] SFTP connected successfully.');
 
+    console.log('[save-no-ai] Attempting to parse formData...');
     const formData = await request.formData();
+    console.log('[save-no-ai] formData parsed successfully.');
     const manualText = formData.get('manualText') || '';
     let noteTitle = formData.get('noteTitle') || 'New Note'; // Get title from form
     const transcribeAudio = formData.get('transcribeAudio') === 'true';
@@ -72,7 +96,9 @@ export async function POST(request) {
         const remoteVoicePath = posixPath.join(sftpBasePath, relativeVoicePath);
         const voiceBuffer = Buffer.from(await voiceBlob.arrayBuffer());
 
+        console.log(`[save-no-ai] SFTP: Attempting to upload voice recording ${originalName} to ${remoteVoicePath}`);
         await sftpService.uploadFile(sftpClient, voiceBuffer, remoteVoicePath);
+        console.log(`[save-no-ai] SFTP: Successfully uploaded voice recording ${originalName} to ${remoteVoicePath}`);
         uploadedFilePaths.voice.push({ path: relativeVoicePath, name: originalName, size: voiceBlob.size });
         console.log(`Uploaded voice recording: ${originalName} to ${remoteVoicePath}`);
 
@@ -101,7 +127,9 @@ export async function POST(request) {
 
         const relativeFilePath = posixPath.join(userId, targetDir, uniqueFileName);
         const remoteFilePath = posixPath.join(sftpBasePath, relativeFilePath);
+        console.log(`[save-no-ai] SFTP: Attempting to upload attachment ${file.name} to ${remoteFilePath}`);
         await sftpService.uploadFile(sftpClient, fileBuffer, remoteFilePath);
+        console.log(`[save-no-ai] SFTP: Successfully uploaded attachment ${file.name} to ${remoteFilePath}`);
         pathList.push({ path: relativeFilePath, name: file.name, size: file.size });
         console.log(`Uploaded attachment: ${file.name} to ${remoteFilePath}`);
       }
@@ -122,7 +150,9 @@ export async function POST(request) {
             const fileBuffer = Buffer.from(fileContent, 'utf-8');
             const relativeFilePath = posixPath.join(userId, 'files', uniqueFilename);
             const remoteFilePath = posixPath.join(sftpBasePath, relativeFilePath);
+            console.log(`[save-no-ai] SFTP: Attempting to upload scraped content for ${url} to ${remoteFilePath}`);
             await sftpService.uploadFile(sftpClient, fileBuffer, remoteFilePath);
+            console.log(`[save-no-ai] SFTP: Successfully uploaded scraped content for ${url} to ${remoteFilePath}`);
             uploadedFilePaths.files.push({
               path: relativeFilePath,
               name: `${baseFilename}.txt`,
@@ -178,17 +208,18 @@ export async function POST(request) {
       };
 
       console.log('Preparing merged note data for Supabase update (no-AI):', JSON.stringify(noteDataForDb, null, 2));
+      console.log(`[save-no-ai] DB: Attempting to update note ID ${noteIdToUpdate}`);
       const { error: updateError } = await supabaseAdmin
         .from('notes')
         .update(noteDataForDb)
         .eq('id', noteIdToUpdate); // userId check already done when fetching
 
       if (updateError) {
-        console.error(`Supabase update error for note ${noteIdToUpdate} (no-AI save):`, updateError);
+        console.error(`[save-no-ai] DB: Supabase update error for note ${noteIdToUpdate} (no-AI save):`, updateError);
         dbError = updateError;
       } else {
         savedNoteId = noteIdToUpdate;
-        console.log(`Note ${noteIdToUpdate} updated successfully with merged content (no-AI save).`);
+        console.log(`[save-no-ai] DB: Note ${noteIdToUpdate} updated successfully with merged content (no-AI save).`);
       }
 
     } else {
@@ -203,6 +234,7 @@ export async function POST(request) {
         processing_status: 'processing', // Standard initial status
       };
       console.log('Preparing new note data for Supabase insert (no-AI):', JSON.stringify(noteDataForDb, null, 2));
+      console.log('[save-no-ai] DB: Attempting to insert new note.');
       const { data: newNote, error: insertError } = await supabaseAdmin
         .from('notes')
         .insert(noteDataForDb)
@@ -210,11 +242,11 @@ export async function POST(request) {
         .single();
 
       if (insertError) {
-        console.error('Supabase insert error (initial no-AI save):', insertError);
+        console.error('[save-no-ai] DB: Supabase insert error (initial no-AI save):', insertError);
         dbError = insertError;
       } else {
         savedNoteId = newNote.id;
-        console.log('Initial note (no-AI) saved successfully with ID:', savedNoteId);
+        console.log('[save-no-ai] DB: Initial note (no-AI) saved successfully with ID:', savedNoteId);
       }
     }
 
@@ -240,6 +272,7 @@ export async function POST(request) {
 
     // Trigger async processing for title, excerpt, and any other standard post-processing
     // Add a flag to tell process-async to skip main content LLM restructuring
+    console.log(`[save-no-ai] ASYNC: Attempting to trigger async processing for note ID ${savedNoteId}`);
     const processResponse = await fetch(`${request.nextUrl.origin}/api/notes/process-async`, {
       method: 'POST',
       headers: {
@@ -251,6 +284,7 @@ export async function POST(request) {
         processType: 'no_ai_content_structuring' // Flag for process-async
       }),
     });
+    console.log(`[save-no-ai] ASYNC: Fetch call to process-async completed. Status: ${processResponse.status}`);
 
     if (!processResponse.ok) {
       const processErrorResult = await processResponse.json();
