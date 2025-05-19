@@ -272,17 +272,67 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error('Error in save-no-ai endpoint. Type:', typeof error, 'Message:', error ? error.message : 'N/A', 'Stack:', error ? error.stack : 'N/A');
-    // Try to return a more robust and simple JSON response
+    let errorMessage = 'Unknown server error';
+    let errorStack = 'No stack trace available';
+
+    if (error instanceof Error) {
+        errorMessage = error.message;
+        errorStack = error.stack || 'No stack trace available';
+    } else if (typeof error === 'string') {
+        errorMessage = error;
+    } else if (error && typeof error.toString === 'function') {
+        try {
+            errorMessage = error.toString();
+        } catch (e) {
+            errorMessage = 'Error object could not be converted to string.';
+        }
+    }
+
+    if (errorMessage === null || typeof errorMessage === 'undefined') {
+        errorMessage = 'Error message is null or undefined.';
+    }
+
+    console.error(
+        'Error in save-no-ai endpoint. Type:', typeof error,
+        'Message:', errorMessage,
+        'Stack:', errorStack
+    );
+
     try {
         return NextResponse.json({
             error_message: "A server error occurred in save-no-ai processing.",
-            error_details: String(error ? error.message : 'Unknown error type')
+            error_details: errorMessage
         }, { status: 500 });
     } catch (responseError) {
-        console.error("CRITICAL: Failed to create JSON response in save-no-ai's main catch block:", responseError);
-        // Fallback to a plain text response if NextResponse.json itself fails
-        return new Response("Internal Server Error - Response Generation Failed in save-no-ai", {
+        let responseErrorMessage = 'Unknown error during response generation.';
+        let responseErrorStack = 'No stack trace available for responseError';
+
+        if (responseError instanceof Error) {
+            responseErrorMessage = responseError.message;
+            responseErrorStack = responseError.stack || 'No stack trace available';
+        } else if (typeof responseError === 'string') {
+            responseErrorMessage = responseError;
+        } else if (responseError && typeof responseError.toString === 'function') {
+            try {
+                responseErrorMessage = responseError.toString();
+            } catch (e) {
+                responseErrorMessage = 'Response error object could not be converted to string.';
+            }
+        }
+        
+        if (responseErrorMessage === null || typeof responseErrorMessage === 'undefined') {
+            responseErrorMessage = 'Response error message is null or undefined.';
+        }
+
+        console.error(
+            "CRITICAL: Failed to create JSON response in save-no-ai's main catch block:",
+            'Message:', responseErrorMessage,
+            'Stack:', responseErrorStack
+        );
+
+        // Fallback to a plain text response
+        return new Response(`Internal Server Error - Response Generation Failed. Original error: ${errorMessage}. Response creation error: ${responseErrorMessage}`,
+        {
             status: 500,
             headers: { 'Content-Type': 'text/plain' }
         });
